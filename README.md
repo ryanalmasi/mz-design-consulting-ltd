@@ -15,7 +15,9 @@ npm run dev        # http://localhost:4321
 **Read [`docs/TODO-BEFORE-LAUNCH.md`](docs/TODO-BEFORE-LAUNCH.md) first** — the
 site renders visible placeholders for business details that still need filling
 in. [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) covers hosting and the contact
-form.
+form. [`docs/IMPROVEMENTS.md`](docs/IMPROVEMENTS.md) is the post-launch backlog.
+
+Agents: start with [`CLAUDE.md`](CLAUDE.md) and [`MEMORY.md`](MEMORY.md).
 
 ---
 

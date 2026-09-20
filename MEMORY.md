@@ -244,3 +244,15 @@ Measured: homepage **3.7 MB → 40 KB** (8 KB gzipped). Total JS ~2 KB.
   devDependencies. Not done unasked.*
 - Dark mode is implemented and audited but has only been eyeballed on the
   projects page. Worth a fuller visual pass.
+
+### Follow-up in the same session
+
+User asked what else could be added. Audited the build for gaps and wrote
+`docs/IMPROVEMENTS.md` — a prioritised post-launch backlog with effort
+estimates, plus an explicit "not worth doing" section so rejected ideas do not
+get re-proposed. Confirmed missing by inspecting `dist/`: `FAQPage`,
+`BreadcrumbList` and `Service` schema; RSS; CI workflow; analytics; `tests/`;
+and any city landing pages (11 service areas defined, 0 pages targeting them).
+
+Top of that backlog: analytics first, because without it every other priority
+call on the list is guesswork.
