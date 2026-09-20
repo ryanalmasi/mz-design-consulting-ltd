@@ -1,0 +1,168 @@
+---
+import '@/styles/global.css';
+import Nav from '@/components/Nav.astro';
+import TitleBlock from '@/components/TitleBlock.astro';
+import { site, contact, credentials, serviceAreas, isTodo } from '@/site.config';
+import { normalizePath } from '@/lib/paths';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Path to an OG image in /public. Defaults to the site card. */
+  image?: string;
+  /** Set on article pages so the JSON-LD describes an Article. */
+  article?: {
+    published: string;
+    modified?: string;
+    section: string;
+  };
+  noindex?: boolean;
+}
+
+const { title, description, image = '/og-default.png', article, noindex } = Astro.props;
+
+/**
+ * `build.format: 'file'` emits `/services.html`, so the build-time pathname
+ * carries the extension while links and the sitemap do not. See lib/paths.ts.
+ */
+const canonicalPath = normalizePath(Astro.url.pathname);
+
+const canonical = new URL(canonicalPath, Astro.site ?? site.origin);
+const ogImage = new URL(image, Astro.site ?? site.origin);
+
+// Title tags read "<page> | M&Z Design Consulting" except on the homepage,
+// where the page title already carries the firm name.
+const fullTitle = title.includes(site.name) ? title : `${title} | ${site.name}`;
+
+const organization = {
+  '@type': 'ProfessionalService',
+  '@id': `${site.origin}/#organization`,
+  name: site.legalName,
+  alternateName: site.name,
+  url: site.origin,
+  description: site.description,
+  ...(isTodo(contact.phone) ? {} : { telephone: contact.phone }),
+  ...(isTodo(contact.email) ? {} : { email: contact.email }),
+  ...(isTodo(contact.address.city)
+    ? {}
+    : {
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: String(contact.address.street),
+          addressLocality: String(contact.address.city),
+          addressRegion: String(contact.address.region),
+          postalCode: String(contact.address.postalCode),
+          addressCountry: 'CA',
+        },
+      }),
+  ...(isTodo(contact.linkedin) ? {} : { sameAs: [contact.linkedin] }),
+  areaServed: serviceAreas.map((a) => ({
+    '@type': 'City',
+    name: a.city,
+    containedInPlace: {
+      '@type': 'State',
+      name: a.region === 'AB' ? 'Alberta' : 'British Columbia',
+    },
+  })),
+  knowsAbout: [
+    'Civil engineering',
+    'Site grading design',
+    'Earthworks and mass haul optimization',
+    'Stormwater management',
+    'Drainage and culvert design',
+    'Road and access design',
+    'Autodesk Civil 3D modelling',
+  ],
+  ...(isTodo(credentials.apegaPermit)
+    ? {}
+    : {
+        hasCredential: {
+          '@type': 'EducationalOccupationalCredential',
+          credentialCategory: 'Permit to Practice',
+          recognizedBy: { '@type': 'Organization', name: 'APEGA' },
+          identifier: String(credentials.apegaPermit),
+        },
+      }),
+};
+
+const schema: Record<string, unknown> = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    organization,
+    {
+      '@type': 'WebSite',
+      '@id': `${site.origin}/#website`,
+      url: site.origin,
+      name: site.name,
+      publisher: { '@id': `${site.origin}/#organization` },
+    },
+    ...(article
+      ? [
+          {
+            '@type': 'Article',
+            headline: title,
+            description,
+            datePublished: article.published,
+            dateModified: article.modified ?? article.published,
+            articleSection: article.section,
+            image: ogImage.href,
+            author: { '@id': `${site.origin}/#organization` },
+            publisher: { '@id': `${site.origin}/#organization` },
+            mainEntityOfPage: canonical.href,
+          },
+        ]
+      : []),
+  ],
+};
+---
+
+<!doctype html>
+<html lang="en-CA">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical.href} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+    <meta property="og:type" content={article ? 'article' : 'website'} />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical.href} />
+    <meta property="og:image" content={ogImage.href} />
+    <meta property="og:locale" content="en_CA" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage.href} />
+
+    <meta name="theme-color" content="#15181b" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ebebe5" media="(prefers-color-scheme: light)" />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+  </head>
+
+  <body>
+    <a href="#main" class="skip-link">Skip to main content</a>
+    <Nav />
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    <TitleBlock />
+  </body>
+</html>
+
+<style is:global>
+  /* main is focusable for the skip link but must not show a ring on click. */
+  main:focus {
+    outline: none;
+  }
+</style>

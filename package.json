@@ -1,0 +1,33 @@
+{
+  "name": "mz-design-consulting",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "dev:full": "npm run build && wrangler pages dev dist --port 8788",
+    "check": "astro check",
+    "verify": "astro check && astro build",
+    "deploy": "npm run build && wrangler pages deploy dist"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.4",
+    "@fontsource-variable/archivo": "^5.1.0",
+    "@fontsource/ibm-plex-mono": "^5.1.0",
+    "@fontsource/ibm-plex-sans": "^5.1.0",
+    "astro": "^7.3.3",
+    "sharp": "^0.35.4",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@cloudflare/workers-types": "^5.20260920.1",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.135.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

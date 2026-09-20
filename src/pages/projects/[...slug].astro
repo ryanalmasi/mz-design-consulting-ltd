@@ -1,0 +1,261 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import { Image } from 'astro:assets';
+import Base from '@/layouts/Base.astro';
+import CtaBand from '@/components/CtaBand.astro';
+import ProjectCard from '@/components/ProjectCard.astro';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects');
+  return projects.map((project) => ({
+    params: { slug: project.id },
+    props: { project },
+  }));
+}
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+}
+
+const { project } = Astro.props;
+const { data } = project;
+const { Content } = await render(project);
+
+const related = (await getCollection('projects'))
+  .filter((p) => p.id !== project.id && p.data.category === data.category)
+  .sort((a, b) => a.data.order - b.data.order)
+  .slice(0, 3);
+---
+
+<Base title={data.title} description={data.summary}>
+  <article>
+    <header class="detail-header band-ink">
+      <div class="container">
+        <a href="/projects" class="back data-sm">Projects</a>
+        <p class="detail-category data-sm">{data.category} &mdash; {data.discipline}</p>
+        <h1>{data.title}</h1>
+        <p class="detail-summary">{data.summary}</p>
+      </div>
+    </header>
+
+    <div class="detail-media">
+      <div class="container">
+        <Image
+          src={data.image}
+          alt={data.imageAlt}
+          widths={[600, 1000, 1400]}
+          sizes="(max-width: 1240px) 100vw, 1240px"
+          loading="eager"
+          class="detail-img"
+        />
+      </div>
+    </div>
+
+    {
+      (data.metrics.length > 0 || data.location) && (
+        <div class="container">
+          <dl class="detail-facts">
+            {data.location && (
+              <div class="fact">
+                <dt>Location</dt>
+                <dd>{data.location}</dd>
+              </div>
+            )}
+            {data.client && (
+              <div class="fact">
+                <dt>Client</dt>
+                <dd>{data.client}</dd>
+              </div>
+            )}
+            {data.metrics.map((m) => (
+              <div class="fact">
+                <dt>{m.label}</dt>
+                <dd class="data">{m.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )
+    }
+
+    <div class="container detail-layout">
+      <div class="detail-prose">
+        <Content />
+      </div>
+
+      {
+        data.services.length > 0 && (
+          <aside class="detail-aside">
+            <h2 class="aside-title">Services provided</h2>
+            <hr class="rule" />
+            <ul class="aside-list">
+              {data.services.map((s) => (
+                <li>{s}</li>
+              ))}
+            </ul>
+          </aside>
+        )
+      }
+    </div>
+  </article>
+
+  {
+    related.length > 0 && (
+      <section class="section band-inset">
+        <div class="container">
+          <h2>More {data.category.toLowerCase()} work</h2>
+          <hr class="rule related-rule" />
+          <div class="card-grid">
+            {related.map((p) => (
+              <ProjectCard project={p} />
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <CtaBand />
+</Base>
+
+<style>
+  .detail-header {
+    padding-block: var(--s-7) var(--s-8);
+  }
+
+  .back {
+    display: inline-block;
+    color: var(--cut-light);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    margin-bottom: var(--s-5);
+    padding-bottom: 2px;
+  }
+
+  .back:hover {
+    border-bottom-color: var(--cut-light);
+  }
+
+  .detail-category {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: var(--s-3);
+  }
+
+  .detail-header h1 {
+    font-size: clamp(2rem, 5vw, 3.25rem);
+    max-width: 22ch;
+  }
+
+  .detail-summary {
+    margin-top: var(--s-5);
+    max-width: var(--measure);
+    font-size: var(--t-md);
+    line-height: var(--lh-loose);
+    color: var(--text-invert-muted);
+  }
+
+  .detail-media {
+    background: linear-gradient(to bottom, var(--bg-invert) 50%, transparent 50%);
+  }
+
+  .detail-img {
+    width: 100%;
+    aspect-ratio: 21 / 9;
+    object-fit: cover;
+    border-radius: var(--radius);
+  }
+
+  .detail-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-7);
+    margin: var(--s-7) 0 0;
+    padding-bottom: var(--s-6);
+    border-bottom: var(--border-strong);
+  }
+
+  .fact dt {
+    font-family: var(--font-mono);
+    font-size: var(--t-2xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: var(--s-2);
+  }
+
+  .fact dd {
+    margin: 0;
+    font-size: var(--t-xl);
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .detail-layout {
+    display: grid;
+    grid-template-columns: 1fr 250px;
+    gap: var(--s-8);
+    align-items: start;
+    padding-block: var(--s-7) var(--s-8);
+  }
+
+  .detail-prose {
+    max-width: var(--measure);
+  }
+
+  .detail-prose :global(p) {
+    line-height: var(--lh-loose);
+    color: var(--text-muted);
+  }
+
+  .detail-prose :global(p + p) {
+    margin-top: var(--s-4);
+  }
+
+  .aside-title {
+    font-family: var(--font-mono);
+    font-size: var(--t-2xs);
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: var(--s-3);
+  }
+
+  .aside-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .aside-list li {
+    padding-block: var(--s-3);
+    border-bottom: var(--border);
+    font-size: var(--t-sm);
+  }
+
+  .related-rule {
+    margin-top: var(--s-4);
+  }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: var(--s-5);
+    margin-top: var(--s-6);
+  }
+
+  @media (max-width: 860px) {
+    .detail-layout {
+      grid-template-columns: 1fr;
+      gap: var(--s-6);
+    }
+
+    .detail-facts {
+      gap: var(--s-5);
+    }
+
+    .detail-img {
+      aspect-ratio: 16 / 9;
+    }
+  }
+</style>

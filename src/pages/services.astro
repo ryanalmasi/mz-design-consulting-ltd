@@ -1,0 +1,292 @@
+---
+import Base from '@/layouts/Base.astro';
+import PageHeader from '@/components/PageHeader.astro';
+import CtaBand from '@/components/CtaBand.astro';
+
+const disciplines = [
+  {
+    id: 'grading',
+    title: 'Site grading & earthworks',
+    body: 'Grading design driven by the earthwork result. We model the existing terrain from the survey, test finished-grade alternatives against it, and steer the design toward balance inside the constraints that cannot move — tie-in elevations, servicing inverts, slope limits and accessibility requirements.',
+    scope: [
+      'Mass grading & terrain modelling',
+      'Cut/fill volume calculation',
+      'Mass haul analysis & phasing',
+      'Earthwork balance optimization',
+      'Lot, pad & road grading',
+      'Construction sequencing',
+    ],
+  },
+  {
+    id: 'stormwater',
+    title: 'Stormwater management',
+    body: 'Hydrologic and hydraulic analysis through to the outlet structure. Release rates are set by the governing municipal standard; storage follows from the outlet design, which is where a constrained site is usually won or lost.',
+    scope: [
+      'Hydrologic & hydraulic modelling',
+      'Detention & retention pond design',
+      'Outlet structures & spillways',
+      'Storm sewer & drainage design',
+      'Erosion & sediment control plans',
+      'IDF analysis & flood routing',
+    ],
+  },
+  {
+    id: 'transportation',
+    title: 'Road & access design',
+    body: 'Geometric design for roads, intersections and industrial access, designed around the vehicle that will actually use it. Swept path analysis at every turn, grades that loaded trucks can hold in winter, and cross drainage wherever the road cuts a flow path.',
+    scope: [
+      'Road & highway geometric design',
+      'Intersection design & analysis',
+      'Industrial & truck access design',
+      'Swept path / turning analysis',
+      'Culvert & cross drainage design',
+      'Corridor modelling',
+    ],
+  },
+  {
+    id: 'industrial',
+    title: 'Industrial site development',
+    body: 'Facilities where the grading, containment, drainage and access constrain each other. We resolve them as one system — starting from the clean/contaminated drainage split and the containment footprint, because those are the hardest constraints and they consume the most land.',
+    scope: [
+      'Facility grading & site design',
+      'Secondary containment design',
+      'Containment volume verification',
+      'Process area drainage',
+      'Access & circulation design',
+      'Utility corridor coordination',
+    ],
+  },
+  {
+    id: 'municipal',
+    title: 'Municipal infrastructure',
+    body: 'Subdivision and land development engineering through municipal approval. Approval coordination runs alongside the design rather than after it, so the approach is agreed before the drawings are finalised.',
+    scope: [
+      'Municipal road & servicing design',
+      'Water & sanitary sewer design',
+      'Subdivision site servicing',
+      'Development constraints analysis',
+      'Approval submission packages',
+      'Comment response & resubmission',
+    ],
+  },
+  {
+    id: 'civil3d',
+    title: 'Civil 3D & construction support',
+    body: 'Model production and the engineering that continues after the drawings are issued. Where the model goes to the contractor for machine control it becomes a construction document, which raises the standard it has to meet.',
+    scope: [
+      'Surface & corridor modelling',
+      'Earthwork quantity calculation',
+      'IFC / IFA drawing production',
+      'Design review & RFI response',
+      'Field engineering & site inspection',
+      'As-built & record drawings',
+    ],
+  },
+];
+
+const process = [
+  {
+    title: 'Consultation',
+    body: 'Scope, objectives, timeline, and the regulatory environment the project sits in.',
+  },
+  {
+    title: 'Site assessment',
+    body: 'Terrain analysis, existing conditions, utility review, and the constraints that will bound the design.',
+  },
+  {
+    title: 'Preliminary design',
+    body: 'Conceptual alternatives tested against the constraints, with the cost consequences of each made explicit.',
+  },
+  {
+    title: 'Detailed design',
+    body: 'IFC drawings, specifications, calculations and the regulatory submission package.',
+  },
+  {
+    title: 'Construction support',
+    body: 'RFI responses, site inspections, field engineering, and as-built documentation.',
+  },
+];
+---
+
+<Base
+  title="Civil engineering services"
+  description="Civil engineering services across Alberta and British Columbia: site grading and earthworks, stormwater management, road and access design, industrial site development, municipal infrastructure, and Civil 3D modelling."
+>
+  <PageHeader
+    title="What we design"
+    lead="Six disciplines, applied to land development, industrial facilities, municipal infrastructure and transportation projects across Alberta and British Columbia."
+  />
+
+  <section class="section">
+    <div class="container">
+      <ul class="disciplines">
+        {
+          disciplines.map((d) => (
+            <li class="discipline" id={d.id}>
+              <div class="d-head">
+                <h2>{d.title}</h2>
+              </div>
+              <div class="d-body">
+                <p class="d-desc">{d.body}</p>
+                <h3 class="d-scope-title">Scope</h3>
+                <ul class="d-scope">
+                  {d.scope.map((s) => <li>{s}</li>)}
+                </ul>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- The process genuinely is a sequence, which is the only place on this
+       site where numbered markers earn their place. -->
+  <section class="section band-inset">
+    <div class="container">
+      <h2>How a project runs</h2>
+      <hr class="rule process-rule" />
+      <ol class="process">
+        {
+          process.map((step, i) => (
+            <li class="step">
+              <span class="step-num data" aria-hidden="true">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <h3 class="step-title">{step.title}</h3>
+              <p class="step-body">{step.body}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <CtaBand />
+</Base>
+
+<style>
+  .disciplines {
+    list-style: none;
+    padding: 0;
+  }
+
+  .discipline {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: var(--s-7);
+    padding-block: var(--s-7);
+    border-top: var(--border-strong);
+    /* Anchored links from the footer land clear of the sticky nav. */
+    scroll-margin-top: calc(var(--nav-h) + var(--s-5));
+  }
+
+  .discipline:last-child {
+    border-bottom: var(--border-strong);
+  }
+
+  .d-head h2 {
+    font-size: var(--t-xl);
+    position: sticky;
+    top: calc(var(--nav-h) + var(--s-5));
+  }
+
+  .d-desc {
+    max-width: var(--measure);
+    line-height: var(--lh-loose);
+    color: var(--text-muted);
+  }
+
+  .d-scope-title {
+    margin-top: var(--s-6);
+    margin-bottom: var(--s-3);
+    font-family: var(--font-mono);
+    font-size: var(--t-2xs);
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .d-scope {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 var(--s-6);
+    list-style: none;
+    padding: 0;
+  }
+
+  .d-scope li {
+    padding-block: var(--s-3);
+    border-top: var(--border);
+    font-size: var(--t-sm);
+  }
+
+  @media (max-width: 860px) {
+    .discipline {
+      grid-template-columns: 1fr;
+      gap: var(--s-5);
+    }
+
+    .d-head h2 {
+      position: static;
+    }
+
+    .d-scope {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ---- Process ---- */
+  .process-rule {
+    margin-top: var(--s-4);
+  }
+
+  .process {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 0;
+    list-style: none;
+    padding: 0;
+    counter-reset: none;
+  }
+
+  .step {
+    padding: var(--s-6) var(--s-5) var(--s-6) 0;
+    border-right: var(--border);
+  }
+
+  .step:last-child {
+    border-right: 0;
+  }
+
+  .step-num {
+    display: block;
+    font-size: var(--t-sm);
+    color: var(--accent-text);
+    margin-bottom: var(--s-3);
+  }
+
+  .step-title {
+    font-size: var(--t-md);
+    margin-bottom: var(--s-2);
+  }
+
+  .step-body {
+    font-size: var(--t-sm);
+    line-height: var(--lh-body);
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 760px) {
+    .step {
+      border-right: 0;
+      border-bottom: var(--border);
+      padding-right: 0;
+    }
+
+    .step:last-child {
+      border-bottom: 0;
+    }
+  }
+</style>

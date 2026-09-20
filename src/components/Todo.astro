@@ -1,0 +1,27 @@
+---
+/**
+ * Renders a value from site.config.ts, or a visible hazard-striped placeholder
+ * if it has not been filled in yet.
+ *
+ * The point is that an unfilled phone number is loud in review rather than
+ * silently absent — which is how the old site shipped with no contact details
+ * on any page.
+ */
+import { isTodo, type Maybe } from '@/site.config';
+
+interface Props {
+  value: Maybe<string>;
+  /** Optional text shown instead of the raw TODO hint. */
+  fallback?: string;
+}
+
+const { value, fallback } = Astro.props;
+---
+
+{
+  isTodo(value) ? (
+    <span class="todo" title={value.__todo}>{fallback ?? value.__todo}</span>
+  ) : (
+    <Fragment>{value}</Fragment>
+  )
+}

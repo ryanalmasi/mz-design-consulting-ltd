@@ -1,0 +1,98 @@
+---
+/**
+ * The mark is the firm's core service drawn at 36px: an existing ground line
+ * crossing a proposed grade line, with the cut wedge filled. It is the same
+ * figure as the hero section diagram, which is what ties the identity together.
+ */
+interface Props {
+  /** Omit the wordmark and render the mark alone. */
+  markOnly?: boolean;
+  class?: string;
+}
+
+const { markOnly = false, class: className } = Astro.props;
+---
+
+<span class:list={['logo', className]}>
+  <svg
+    class="logo-mark"
+    viewBox="0 0 36 36"
+    width="36"
+    height="36"
+    role="img"
+    aria-label="M&Z Design Consulting"
+    focusable="false"
+  >
+    <rect x="0.5" y="0.5" width="35" height="35" fill="none" stroke="currentColor" stroke-opacity="0.35" />
+    <!-- Cut: the ground above the proposed grade, removed. -->
+    <path d="M5 21 L11 12 L18 16 L24 9 L31 14 L31 21 Z" fill="var(--cut-light)" fill-opacity="0.9" />
+    <!-- Existing ground -->
+    <path
+      d="M5 21 L11 12 L18 16 L24 9 L31 14"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linejoin="round"
+    />
+    <!-- Proposed grade — the designed line -->
+    <path d="M3 21 L33 21" stroke="currentColor" stroke-width="1.5" />
+    <!-- Fill hatch below grade -->
+    <path d="M9 25 L13 25 M16 25 L20 25 M23 25 L27 25" stroke="currentColor" stroke-opacity="0.45" stroke-width="1.5" />
+  </svg>
+
+  {
+    !markOnly && (
+      <span class="logo-text">
+        <span class="logo-name">M&amp;Z Design Consulting</span>
+        <span class="logo-sub">Civil Engineering</span>
+      </span>
+    )
+  }
+</span>
+
+<style>
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-3);
+    color: currentColor;
+  }
+
+  .logo-mark {
+    flex-shrink: 0;
+  }
+
+  .logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+  }
+
+  .logo-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--t-base);
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+
+  .logo-sub {
+    font-family: var(--font-mono);
+    font-size: var(--t-2xs);
+    letter-spacing: 0.08em;
+    opacity: 0.6;
+    margin-top: 2px;
+  }
+
+  /* Below 380px the wordmark is what gets dropped, not the mark — the old
+     site shrank the type until it collided with the menu button instead. */
+  @media (max-width: 400px) {
+    .logo-sub {
+      display: none;
+    }
+
+    .logo-name {
+      font-size: var(--t-sm);
+    }
+  }
+</style>

@@ -1,0 +1,428 @@
+@import './tokens.css';
+
+/* Self-hosted so there is no third-party round-trip before text can paint. */
+@import '@fontsource-variable/archivo/wght.css';
+@import '@fontsource/ibm-plex-sans/latin-400.css';
+@import '@fontsource/ibm-plex-sans/latin-500.css';
+@import '@fontsource/ibm-plex-sans/latin-600.css';
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+@import '@fontsource/ibm-plex-mono/latin-500.css';
+
+/* ================================================================
+   Reset
+   ================================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  /* Anchored headings clear the fixed nav instead of hiding under it. */
+  scroll-padding-top: calc(var(--nav-h) + var(--s-5));
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--t-base);
+  line-height: var(--lh-body);
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+img,
+picture,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* Long URLs, project codes and pasted client content reflow instead of
+   forcing a horizontal scrollbar. */
+p,
+li,
+dd,
+h1,
+h2,
+h3,
+h4 {
+  overflow-wrap: break-word;
+}
+
+/* ================================================================
+   Typography
+   ================================================================ */
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--text);
+}
+
+h1 {
+  font-size: clamp(2.5rem, 6.5vw, 4.25rem);
+  letter-spacing: -0.035em;
+}
+
+h2 {
+  font-size: clamp(1.875rem, 4vw, var(--t-3xl));
+  letter-spacing: -0.03em;
+}
+
+h3 {
+  font-size: var(--t-lg);
+  letter-spacing: -0.015em;
+  line-height: var(--lh-snug);
+}
+
+h4 {
+  font-size: var(--t-md);
+  letter-spacing: -0.01em;
+  line-height: var(--lh-snug);
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ================================================================
+   Focus — visible on every interactive element, in both themes
+   ================================================================ */
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+/* Only suppress the ring for pointer users who did not tab here. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.skip-link {
+  position: absolute;
+  top: var(--s-2);
+  left: var(--s-2);
+  z-index: 1000;
+  padding: var(--s-3) var(--s-5);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  border-radius: var(--radius);
+  transform: translateY(-200%);
+  transition: transform var(--dur) var(--ease);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* ================================================================
+   Layout primitives
+   ================================================================ */
+
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.container-narrow {
+  width: 100%;
+  max-width: var(--container-narrow);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.section {
+  padding-block: var(--section-y);
+}
+
+/* Band backgrounds. Kept as single-purpose classes so they never fight with
+   .section's padding through specificity. */
+.band-paper {
+  background: var(--bg-raised);
+}
+
+.band-inset {
+  background: var(--bg-inset);
+}
+
+.band-ink {
+  background: var(--bg-invert);
+  color: var(--text-invert);
+  --muted-ink: var(--text-invert-muted);
+}
+
+.band-ink h1,
+.band-ink h2,
+.band-ink h3,
+.band-ink h4 {
+  color: var(--text-invert);
+}
+
+.band-ink .muted {
+  color: var(--text-invert-muted);
+}
+
+.lead {
+  font-size: var(--t-md);
+  line-height: var(--lh-loose);
+  color: var(--text-muted);
+  max-width: var(--measure);
+}
+
+.prose-measure {
+  max-width: var(--measure);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+/* ================================================================
+   Drawing-sheet devices
+   ================================================================ */
+
+/*
+ * A section head is a hairline rule with the heading sitting on it, the way a
+ * drawing sheet separates views. It replaces the tracked-out uppercase eyebrow
+ * that sat above every section on the old site.
+ */
+.rule {
+  border: 0;
+  border-top: var(--border);
+  margin: 0;
+}
+
+.rule-strong {
+  border: 0;
+  border-top: var(--border-strong);
+  margin: 0;
+}
+
+/* Monospace is reserved for real measured values — elevations, chainages,
+   volumes, quantities — where tabular figures actually matter. It is never
+   used for decorative labels. */
+.data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
+}
+
+.data-sm {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-2xs);
+  letter-spacing: 0.02em;
+  /* Context-aware: dark grounds below redefine --muted-ink, so this never
+     renders the light-ground grey on a dark band (which measured 2.48:1). */
+  color: var(--muted-ink, var(--text-muted));
+}
+
+/* ================================================================
+   Buttons
+   ================================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  /* 48px tall at the default font size — clears the 44px touch minimum. */
+  min-height: 48px;
+  padding: var(--s-3) var(--s-6);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--accent) 85%, #000);
+  border-color: color-mix(in srgb, var(--accent) 85%, #000);
+}
+
+.btn-secondary {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.btn-secondary:hover {
+  border-color: var(--text);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+.btn-on-ink {
+  background: transparent;
+  border-color: var(--line-invert);
+  color: var(--text-invert);
+}
+
+.btn-on-ink:hover {
+  border-color: var(--text-invert);
+  background: color-mix(in srgb, #fff 8%, transparent);
+}
+
+.btn[aria-disabled='true'],
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/*
+ * Text link with a moving underline. No arrow glyph appended to the label —
+ * the underline carries the affordance.
+ */
+.link {
+  display: inline-block;
+  color: var(--accent-text);
+  font-weight: 600;
+  font-size: var(--t-sm);
+  text-decoration: none;
+  padding-block: var(--s-1);
+  border-bottom: 2px solid color-mix(in srgb, var(--accent-text) 30%, transparent);
+  transition: border-color var(--dur) var(--ease);
+}
+
+.link:hover {
+  border-bottom-color: var(--accent-text);
+}
+
+.band-ink .link {
+  color: var(--cut-light);
+  border-bottom-color: color-mix(in srgb, var(--cut-light) 35%, transparent);
+}
+
+.band-ink .link:hover {
+  border-bottom-color: var(--cut-light);
+}
+
+/* ================================================================
+   Utilities
+   ================================================================ */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.stack > * + * {
+  margin-top: var(--flow, var(--s-4));
+}
+
+/*
+ * Placeholder marker. Any business detail still unfilled in site.config.ts
+ * renders like this — impossible to miss in review, and it degrades to plain
+ * readable text rather than breaking the layout.
+ */
+.todo {
+  display: inline-block;
+  padding: 0 0.35em;
+  background: repeating-linear-gradient(
+    -45deg,
+    #ffe8a3,
+    #ffe8a3 6px,
+    #ffd75e 6px,
+    #ffd75e 12px
+  );
+  color: #4a3200;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  font-weight: 500;
+  border-radius: 2px;
+}
+
+/* ================================================================
+   Motion
+   ================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  .site-nav,
+  .skip-link {
+    display: none;
+  }
+}

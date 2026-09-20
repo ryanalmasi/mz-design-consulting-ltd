@@ -1,0 +1,413 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '@/layouts/Base.astro';
+import SectionDiagram from '@/components/SectionDiagram.astro';
+import ProjectCard from '@/components/ProjectCard.astro';
+import ArticleCard from '@/components/ArticleCard.astro';
+import CtaBand from '@/components/CtaBand.astro';
+import { site, stats, software } from '@/site.config';
+
+const projects = (await getCollection('projects'))
+  .filter((p) => p.data.featured)
+  .sort((a, b) => a.data.order - b.data.order)
+  .slice(0, 3);
+
+const articles = (await getCollection('insights'))
+  .filter((a) => !a.data.draft)
+  .sort((a, b) => b.data.published.getTime() - a.data.published.getTime())
+  .slice(0, 3);
+
+const services = [
+  {
+    id: 'grading',
+    title: 'Site grading & earthworks',
+    body: 'Mass grading, cut/fill optimization and mass haul planning, designed to balance on site instead of importing fill.',
+  },
+  {
+    id: 'stormwater',
+    title: 'Stormwater management',
+    body: 'Hydrologic and hydraulic analysis, detention pond design, outlet structures, and erosion and sediment control.',
+  },
+  {
+    id: 'transportation',
+    title: 'Road & access design',
+    body: 'Road geometry, intersections and industrial access designed for the vehicles that will actually use them.',
+  },
+  {
+    id: 'industrial',
+    title: 'Industrial site development',
+    body: 'Facility grading, secondary containment, process drainage and utility coordination, resolved as one system.',
+  },
+  {
+    id: 'municipal',
+    title: 'Municipal infrastructure',
+    body: 'Subdivision servicing, municipal roads, water and sewer, and the approval coordination that goes with them.',
+  },
+  {
+    id: 'civil3d',
+    title: 'Civil 3D & construction support',
+    body: 'Surface and corridor modelling, quantity calculations, IFC drawing production, RFI responses and as-builts.',
+  },
+];
+---
+
+<Base
+  title={`${site.name} | Civil engineering in Alberta & British Columbia`}
+  description={site.description}
+>
+  <!-- ============ HERO ============ -->
+  <section class="hero band-ink">
+    <div class="container hero-body">
+      <h1 class="hero-title">
+        Grading and drainage design<br />that balances on site
+      </h1>
+      <p class="hero-lead">
+        We are civil engineers working across Alberta and British Columbia on land development,
+        industrial facilities and municipal infrastructure — from the first terrain model through
+        IFC drawings and construction support.
+      </p>
+      <div class="hero-actions">
+        <a href="/contact" class="btn btn-primary">Start a project</a>
+        <a href="/projects" class="btn btn-on-ink">See the work</a>
+      </div>
+    </div>
+
+    <SectionDiagram class="hero-diagram" />
+
+    <!-- The caption does the job a decorative diagram cannot: it states, in
+         text, what the drawing above is showing. -->
+    <div class="container">
+      <p class="hero-caption">
+        <span class="hero-caption-mark" aria-hidden="true"></span>
+        Cut balanced against fill. When the volumes match, nothing gets trucked in and nothing
+        gets trucked out — which on a large site is the biggest number on the earthworks bill.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ CREDENTIAL STRIP ============ -->
+  <section class="proof band-paper">
+    <div class="container">
+      <dl class="proof-grid">
+        <div class="proof-item">
+          <dt>Years of experience</dt>
+          <dd class="data">{stats.yearsExperience}+</dd>
+        </div>
+        <div class="proof-item">
+          <dt>Projects delivered</dt>
+          <dd class="data">{stats.projectsDelivered}+</dd>
+        </div>
+        <div class="proof-item">
+          <dt>Provinces served</dt>
+          <dd class="data">AB &amp; BC</dd>
+        </div>
+        <div class="proof-item">
+          <dt>Design platform</dt>
+          <dd class="data">Civil 3D</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ============ SERVICES ============ -->
+  <section class="section" id="services">
+    <div class="container">
+      <div class="head">
+        <h2>What we do</h2>
+        <a href="/services" class="link">All services</a>
+      </div>
+      <hr class="rule" />
+
+      <ul class="svc-grid">
+        {
+          services.map((s) => (
+            <li class="svc">
+              <h3><a href={`/services#${s.id}`}>{s.title}</a></h3>
+              <p>{s.body}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ POSITION ============ -->
+  <section class="section band-inset">
+    <div class="container position">
+      <div class="position-text">
+        <h2>Designs that survive contact with the site</h2>
+        <div class="stack prose-measure">
+          <p>
+            Most of what goes wrong on a civil project goes wrong because the design assumed
+            something the site did not agree with — a survey that missed a grade break, a utility
+            at a different depth than the record showed, a minimum-gradient surface with no
+            tolerance left in it for construction variation.
+          </p>
+          <p>
+            We design for the conditions crews will actually encounter. That means checking flow
+            paths on the design surface rather than trusting the arrows, confirming the elevations
+            that cannot move before committing to a grading concept, and stating the assumptions
+            behind every quantity we issue.
+          </p>
+          <p>
+            It also means telling you early when a constraint makes something more expensive than
+            you were told, instead of at the tender.
+          </p>
+        </div>
+        <a href="/about" class="link position-link">How we work</a>
+      </div>
+
+      <div class="position-aside">
+        <h3 class="position-aside-title">Software</h3>
+        <hr class="rule" />
+        <ul class="tool-list">
+          {software.map((t) => <li class="data-sm">{t}</li>)}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PROJECTS ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="head">
+        <h2>Selected projects</h2>
+        <a href="/projects" class="link">All projects</a>
+      </div>
+      <hr class="rule" />
+
+      <div class="card-grid">
+        {projects.map((p, i) => <ProjectCard project={p} priority={i === 0} />)}
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INSIGHTS ============ -->
+  <section class="section band-inset">
+    <div class="container">
+      <div class="head">
+        <h2>Engineering notes</h2>
+        <a href="/insights" class="link">All articles</a>
+      </div>
+      <hr class="rule" />
+
+      <div class="card-grid">
+        {articles.map((a) => <ArticleCard article={a} />)}
+      </div>
+    </div>
+  </section>
+
+  <CtaBand />
+</Base>
+
+<style>
+  /* ---- Hero ---- */
+  .hero {
+    padding-top: var(--s-9);
+    overflow: hidden;
+  }
+
+  .hero-title {
+    /* Wide enough that the explicit break controls the line turn rather than
+       the measure fighting it. */
+    max-width: 24ch;
+  }
+
+  .hero-lead {
+    margin-top: var(--s-5);
+    max-width: 58ch;
+    font-size: var(--t-md);
+    line-height: var(--lh-loose);
+    color: var(--text-invert-muted);
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: var(--s-3);
+    margin-top: var(--s-6);
+    flex-wrap: wrap;
+  }
+
+  .hero-body {
+    padding-bottom: var(--s-7);
+  }
+
+  .hero-caption {
+    display: flex;
+    gap: var(--s-4);
+    max-width: 74ch;
+    padding-block: var(--s-5) var(--s-8);
+    font-size: var(--t-sm);
+    line-height: var(--lh-body);
+    color: var(--text-invert-muted);
+  }
+
+  .hero-caption-mark {
+    flex-shrink: 0;
+    width: 28px;
+    height: 2px;
+    margin-top: 0.7em;
+    background: var(--cut-light);
+  }
+
+  @media (max-width: 640px) {
+    .hero {
+      padding-top: var(--s-7);
+    }
+
+    .hero-actions .btn {
+      flex: 1 1 100%;
+    }
+  }
+
+  /* ---- Proof strip ---- */
+  .proof {
+    border-block: var(--border);
+  }
+
+  .proof-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    margin: 0;
+  }
+
+  .proof-item {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: var(--s-2);
+    padding: var(--s-6) var(--s-5);
+    border-left: var(--border);
+  }
+
+  .proof-item:first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .proof-item dt {
+    font-size: var(--t-2xs);
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .proof-item dd {
+    margin: 0;
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  @media (max-width: 720px) {
+    .proof-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .proof-item:nth-child(odd) {
+      border-left: 0;
+      padding-left: 0;
+    }
+
+    .proof-item:nth-child(n + 3) {
+      border-top: var(--border);
+    }
+  }
+
+  /* ---- Section heads ---- */
+  .head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-5);
+    margin-bottom: var(--s-4);
+    flex-wrap: wrap;
+  }
+
+  /* ---- Services ---- */
+  .svc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 0;
+    list-style: none;
+    padding: 0;
+  }
+
+  .svc {
+    padding: var(--s-6) var(--s-5) var(--s-6) 0;
+    border-bottom: var(--border);
+  }
+
+  .svc h3 {
+    margin-bottom: var(--s-3);
+  }
+
+  .svc h3 a {
+    text-decoration: none;
+  }
+
+  .svc h3 a:hover {
+    color: var(--accent-text);
+  }
+
+  .svc p {
+    font-size: var(--t-sm);
+    line-height: var(--lh-body);
+    color: var(--text-muted);
+    max-width: 42ch;
+  }
+
+  /* ---- Position ---- */
+  .position {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: var(--s-8);
+    align-items: start;
+  }
+
+  .position h2 {
+    margin-bottom: var(--s-5);
+  }
+
+  .position-link {
+    margin-top: var(--s-5);
+  }
+
+  .position-aside-title {
+    font-size: var(--t-sm);
+    font-family: var(--font-mono);
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: var(--s-3);
+  }
+
+  .tool-list {
+    list-style: none;
+    padding: 0;
+    display: grid;
+  }
+
+  .tool-list li {
+    padding-block: var(--s-3);
+    border-bottom: var(--border);
+    color: var(--text);
+    font-size: var(--t-xs);
+  }
+
+  @media (max-width: 860px) {
+    .position {
+      grid-template-columns: 1fr;
+      gap: var(--s-6);
+    }
+  }
+
+  /* ---- Card grids ---- */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--s-5);
+    margin-top: var(--s-6);
+  }
+</style>

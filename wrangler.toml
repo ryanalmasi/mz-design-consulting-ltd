@@ -1,0 +1,15 @@
+# Cloudflare Pages project configuration.
+#
+# Secrets are NOT set here — RESEND_API_KEY, CONTACT_TO, CONTACT_FROM and
+# TURNSTILE_SECRET are configured as encrypted environment variables in the
+# Cloudflare dashboard. See docs/DEPLOYMENT.md.
+
+name = "mz-design-consulting"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-09-20"
+
+# Optional. Bind a KV namespace named RATE_LIMIT to enable per-IP rate limiting
+# on the contact endpoint. The function works without it.
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT"
+# id = "<your-kv-namespace-id>"

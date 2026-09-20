@@ -1,0 +1,473 @@
+---
+import { Image } from 'astro:assets';
+import Base from '@/layouts/Base.astro';
+import PageHeader from '@/components/PageHeader.astro';
+import CtaBand from '@/components/CtaBand.astro';
+import Todo from '@/components/Todo.astro';
+import { stats, software, credentials } from '@/site.config';
+import reviewImage from '@/assets/images/design-review-drawings.jpg';
+
+const principles = [
+  {
+    title: 'Constructability first',
+    body: 'A design that cannot be built efficiently is not finished. We design against real construction tolerance — which is why we do not put paved surfaces at the minimum practical gradient and call it drained.',
+  },
+  {
+    title: 'State the basis',
+    body: 'Every quantity we issue carries its assumptions: strip depth, shrinkage factor, what is included and excluded, what datum. A number without its basis is not something anyone can rely on.',
+  },
+  {
+    title: 'Honest assessments',
+    body: 'If a constraint makes something more expensive than you were told, you hear it from us during design, not from the contractor at tender.',
+  },
+  {
+    title: 'Direct engineer access',
+    body: 'You work with the engineer doing the design. Projects are not handed to junior staff after the pitch.',
+  },
+];
+
+const sectors = [
+  { name: 'Industrial facilities', detail: 'Processing plants, compressor stations, tank farms and energy infrastructure' },
+  { name: 'Land development', detail: 'Subdivisions, commercial and mixed-use sites, servicing and approvals' },
+  { name: 'Transportation', detail: 'Highway geometry, interchanges, corridors and industrial access' },
+  { name: 'Municipal infrastructure', detail: 'Roads, utilities, stormwater systems and development review' },
+  { name: 'Resource development', detail: 'Containment systems, facility pads and access in the energy sector' },
+  { name: 'Utility & upgrade projects', detail: 'Culvert replacement, drainage upgrades and infrastructure renewal' },
+];
+
+const hasTeam = credentials.engineers.length > 0;
+---
+
+<Base
+  title="About"
+  description="M&Z Design Consulting is a civil engineering consulting firm serving Alberta and British Columbia — practical, constructable design for land development, industrial facilities, transportation and municipal infrastructure."
+>
+  <PageHeader
+    title="Who we are"
+    lead="A civil engineering consultancy working across Alberta and British Columbia, on projects where the grading, drainage and earthwork decisions determine what the job costs."
+  />
+
+  <section class="section">
+    <div class="container intro">
+      <div class="intro-text stack">
+        <h2>Engineering that accounts for the site</h2>
+        <p>
+          M&amp;Z Design Consulting delivers civil engineering for land development, industrial
+          facilities, transportation infrastructure and municipal projects throughout Western
+          Canada. We work with developers, contractors, municipalities and other engineering
+          firms, from feasibility through IFC drawings and construction support.
+        </p>
+        <p>
+          Our approach is not complicated. Establish the constraints that genuinely bound the
+          design before committing to a concept. Steer the design toward the result that costs
+          least to build, within those constraints. Check the design surface itself rather than
+          trusting the intent behind it. And say plainly what every number depends on.
+        </p>
+        <p>
+          That is a less exciting description than most engineering firms give, but it is what
+          separates a project that is built roughly as drawn from one that accumulates change
+          orders.
+        </p>
+      </div>
+
+      <figure class="intro-figure">
+        <Image
+          src={reviewImage}
+          alt="Engineers reviewing large-format site plans and a specification binder during a design review"
+          widths={[400, 700]}
+          sizes="(max-width: 860px) 100vw, 40vw"
+          class="intro-img"
+        />
+      </figure>
+    </div>
+  </section>
+
+  <!-- ---- Registration: the trust signal the old site was missing ---- -->
+  <section class="section band-inset">
+    <div class="container">
+      <h2>Professional registration</h2>
+      <hr class="rule reg-rule" />
+
+      <div class="reg-grid">
+        <div class="reg-item">
+          <h3 class="reg-label">Alberta</h3>
+          <p class="reg-value data">
+            APEGA Permit to Practice
+            <Todo value={credentials.apegaPermit} fallback="TODO" />
+          </p>
+          <p class="reg-note muted">
+            Association of Professional Engineers and Geoscientists of Alberta
+          </p>
+        </div>
+
+        <div class="reg-item">
+          <h3 class="reg-label">British Columbia</h3>
+          <p class="reg-value data">
+            EGBC Permit to Practice
+            <Todo value={credentials.egbcPermit} fallback="TODO" />
+          </p>
+          <p class="reg-note muted">Engineers and Geoscientists British Columbia</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---- Principles ---- -->
+  <section class="section">
+    <div class="container">
+      <h2>How we work</h2>
+      <hr class="rule" />
+      <ul class="principles">
+        {
+          principles.map((p) => (
+            <li class="principle">
+              <h3>{p.title}</h3>
+              <p>{p.body}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ---- Team ---- -->
+  <section class="section band-inset">
+    <div class="container team">
+      <div class="team-text stack">
+        <h2>The team</h2>
+        {
+          hasTeam ? (
+            <ul class="team-list">
+              {credentials.engineers.map((e) => (
+                <li class="member">
+                  <h3 class="member-name">
+                    {e.name}, {e.designation}
+                  </h3>
+                  <p class="member-role data-sm">{e.role}</p>
+                  <p class="member-bio">{e.bio}</p>
+                  <p class="member-reg data-sm">{e.registrations.join('  ·  ')}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Fragment>
+              <p>
+                M&amp;Z is built around experienced civil engineering professionals with hands-on
+                project records across industrial, municipal, commercial and infrastructure work
+                in Western Canada. Every project is managed with direct engineer involvement.
+              </p>
+              <p class="team-todo">
+                <Todo
+                  value={{ __todo: 'TODO: add engineer names, P.Eng. designations and registration numbers' }}
+                />
+              </p>
+              <p class="muted team-why">
+                Named engineers with registration numbers are the strongest credibility signal a
+                consulting firm has. A municipal reviewer or a developer checking you out will
+                look for them, and right now there is nothing here for them to find.
+              </p>
+            </Fragment>
+          )
+        }
+      </div>
+
+      <aside class="team-aside">
+        <h3 class="aside-title">Software</h3>
+        <hr class="rule" />
+        <ul class="aside-list">
+          {software.map((t) => <li class="data-sm">{t}</li>)}
+        </ul>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ---- Sectors ---- -->
+  <section class="section">
+    <div class="container">
+      <h2>Sectors we work in</h2>
+      <hr class="rule" />
+      <dl class="sectors">
+        {
+          sectors.map((s) => (
+            <div class="sector">
+              <dt>{s.name}</dt>
+              <dd>{s.detail}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </section>
+
+  <!-- ---- Figures ---- -->
+  <section class="section band-ink">
+    <div class="container">
+      <dl class="figures">
+        <div class="figure">
+          <dd class="data">{stats.projectsDelivered}+</dd>
+          <dt>Projects delivered across Alberta and BC</dt>
+        </div>
+        <div class="figure">
+          <dd class="data">{stats.yearsExperience}+</dd>
+          <dt>Years of combined engineering experience</dt>
+        </div>
+        <div class="figure">
+          <dd class="data">{stats.disciplines}</dd>
+          <dt>Service disciplines under one roof</dt>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <CtaBand />
+</Base>
+
+<style>
+  .intro {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: var(--s-8);
+    align-items: start;
+  }
+
+  .intro-text {
+    --flow: var(--s-4);
+    max-width: var(--measure);
+  }
+
+  .intro-text h2 {
+    margin-bottom: var(--s-2);
+  }
+
+  .intro-text p {
+    line-height: var(--lh-loose);
+    color: var(--text-muted);
+  }
+
+  .intro-figure {
+    margin: 0;
+  }
+
+  .intro-img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: var(--radius);
+  }
+
+  /* ---- Registration ---- */
+  .reg-rule {
+    margin-top: var(--s-4);
+  }
+
+  .reg-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-6);
+    margin-top: var(--s-6);
+  }
+
+  .reg-item {
+    padding: var(--s-5);
+    background: var(--bg-raised);
+    border: var(--border);
+    border-top: 3px solid var(--accent);
+  }
+
+  .reg-label {
+    font-family: var(--font-mono);
+    font-size: var(--t-2xs);
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: var(--s-3);
+  }
+
+  .reg-value {
+    font-size: var(--t-md);
+    font-weight: 500;
+  }
+
+  .reg-note {
+    margin-top: var(--s-2);
+    font-size: var(--t-xs);
+  }
+
+  /* ---- Principles ---- */
+  .principles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 0;
+    list-style: none;
+    padding: 0;
+  }
+
+  .principle {
+    padding: var(--s-6) var(--s-6) var(--s-6) 0;
+    border-bottom: var(--border);
+  }
+
+  .principle h3 {
+    margin-bottom: var(--s-3);
+  }
+
+  .principle p {
+    font-size: var(--t-sm);
+    line-height: var(--lh-body);
+    color: var(--text-muted);
+    max-width: 44ch;
+  }
+
+  /* ---- Team ---- */
+  .team {
+    display: grid;
+    grid-template-columns: 1fr 250px;
+    gap: var(--s-8);
+    align-items: start;
+  }
+
+  .team-text {
+    --flow: var(--s-4);
+    max-width: var(--measure);
+  }
+
+  .team-text p {
+    line-height: var(--lh-loose);
+    color: var(--text-muted);
+  }
+
+  .team-list {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: var(--s-6);
+  }
+
+  .member {
+    padding-top: var(--s-5);
+    border-top: var(--border);
+  }
+
+  .member-name {
+    font-size: var(--t-md);
+  }
+
+  .member-role {
+    margin-top: var(--s-1);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .member-bio {
+    margin-top: var(--s-3);
+  }
+
+  .member-reg {
+    margin-top: var(--s-3);
+  }
+
+  .team-why {
+    font-size: var(--t-sm);
+  }
+
+  .aside-title {
+    font-family: var(--font-mono);
+    font-size: var(--t-2xs);
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: var(--s-3);
+  }
+
+  .aside-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .aside-list li {
+    padding-block: var(--s-3);
+    border-bottom: var(--border);
+    font-size: var(--t-xs);
+  }
+
+  /* ---- Sectors ---- */
+  .sectors {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 0;
+    margin: 0;
+  }
+
+  .sector {
+    padding: var(--s-5) var(--s-6) var(--s-5) 0;
+    border-bottom: var(--border);
+  }
+
+  .sector dt {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--t-md);
+    margin-bottom: var(--s-2);
+  }
+
+  .sector dd {
+    margin: 0;
+    font-size: var(--t-sm);
+    line-height: var(--lh-body);
+    color: var(--text-muted);
+    max-width: 42ch;
+  }
+
+  /* ---- Figures ---- */
+  .figures {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--s-6);
+    margin: 0;
+  }
+
+  .figure {
+    padding-right: var(--s-6);
+    border-left: 1px solid var(--line-invert);
+    padding-left: var(--s-5);
+  }
+
+  .figure:first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .figure dd {
+    margin: 0 0 var(--s-3);
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    font-weight: 500;
+    line-height: 1;
+    color: var(--cut-light);
+  }
+
+  .figure dt {
+    font-size: var(--t-sm);
+    line-height: var(--lh-body);
+    color: var(--text-invert-muted);
+    max-width: 24ch;
+  }
+
+  @media (max-width: 860px) {
+    .intro,
+    .team {
+      grid-template-columns: 1fr;
+      gap: var(--s-6);
+    }
+
+    .reg-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .figure {
+      border-left: 0;
+      padding-left: 0;
+    }
+  }
+</style>

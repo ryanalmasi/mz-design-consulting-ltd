@@ -1,0 +1,285 @@
+---
+import { nav, site, contact, isTodo } from '@/site.config';
+import { isCurrentPath } from '@/lib/paths';
+import Logo from './Logo.astro';
+
+const isCurrent = (href: string) => isCurrentPath(Astro.url.pathname, href);
+const phoneReady = !isTodo(contact.phone);
+---
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand" aria-label={`${site.name} — home`}>
+      <Logo />
+    </a>
+
+    <nav class="nav-links" aria-label="Main">
+      <ul>
+        {
+          nav.map((item) => (
+            <li>
+              <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="nav-actions">
+      {
+        phoneReady && (
+          <a href={`tel:${contact.phoneHref}`} class="nav-phone data">
+            {contact.phone}
+          </a>
+        )
+      }
+      <a href="/contact" class="btn btn-primary nav-cta">Start a project</a>
+    </div>
+
+    <button
+      type="button"
+      class="nav-toggle"
+      id="nav-toggle"
+      aria-expanded="false"
+      aria-controls="nav-drawer"
+    >
+      <span class="visually-hidden">Menu</span>
+      <span class="nav-toggle-bars" aria-hidden="true"><span></span><span></span></span>
+    </button>
+  </div>
+
+  <div class="nav-drawer" id="nav-drawer" hidden>
+    <ul>
+      {
+        nav.map((item) => (
+          <li>
+            <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>
+              {item.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+    <div class="nav-drawer-actions">
+      {
+        phoneReady && (
+          <a href={`tel:${contact.phoneHref}`} class="btn btn-secondary">
+            Call {contact.phone}
+          </a>
+        )
+      }
+      <a href="/contact" class="btn btn-primary">Start a project</a>
+    </div>
+  </div>
+</header>
+
+<style>
+  .site-nav {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-nav);
+    background: var(--bg-invert);
+    /* Required: the logo wordmark and the mark's currentColor strokes inherit
+       from here. Without it they take the body ink and vanish into the dark
+       bar. */
+    color: var(--text-invert);
+    border-bottom: 1px solid var(--line-invert);
+  }
+
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    gap: var(--s-5);
+    max-width: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+    height: var(--nav-h);
+  }
+
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    text-decoration: none;
+    /* Extends the tap area to the full nav height without moving the mark. */
+    padding-block: var(--s-3);
+  }
+
+  .nav-links {
+    margin-left: auto;
+  }
+
+  .nav-links ul {
+    display: flex;
+    align-items: center;
+    gap: var(--s-1);
+    list-style: none;
+    padding: 0;
+  }
+
+  .nav-links a {
+    display: block;
+    padding: var(--s-3) var(--s-4);
+    color: var(--text-invert-muted);
+    font-size: var(--t-sm);
+    font-weight: 500;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+
+  .nav-links a:hover {
+    color: var(--text-invert);
+  }
+
+  /* Current page is marked by a rule under the label, not by colour alone. */
+  .nav-links a[aria-current='page'] {
+    color: var(--text-invert);
+    border-bottom-color: var(--cut-light);
+  }
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--s-4);
+    flex-shrink: 0;
+  }
+
+  .nav-phone {
+    color: var(--text-invert);
+    font-size: var(--t-sm);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    padding-block: var(--s-3);
+  }
+
+  .nav-phone:hover {
+    color: var(--cut-light);
+  }
+
+  .nav-cta {
+    min-height: 40px;
+    padding: var(--s-2) var(--s-4);
+    white-space: nowrap;
+  }
+
+  .nav-toggle {
+    display: none;
+    width: 48px;
+    height: 48px;
+    margin-right: calc(var(--s-3) * -1);
+    align-items: center;
+    justify-content: center;
+    color: var(--text-invert);
+  }
+
+  .nav-toggle-bars {
+    display: block;
+    width: 22px;
+  }
+
+  .nav-toggle-bars span {
+    display: block;
+    height: 2px;
+    background: currentColor;
+    transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+  }
+
+  .nav-toggle-bars span + span {
+    margin-top: 6px;
+  }
+
+  .nav-toggle[aria-expanded='true'] .nav-toggle-bars span:first-child {
+    transform: translateY(4px) rotate(45deg);
+  }
+
+  .nav-toggle[aria-expanded='true'] .nav-toggle-bars span:last-child {
+    transform: translateY(-4px) rotate(-45deg);
+  }
+
+  .nav-drawer {
+    border-top: 1px solid var(--line-invert);
+    background: var(--bg-invert);
+    padding: var(--s-4) var(--gutter) var(--s-6);
+  }
+
+  .nav-drawer[hidden] {
+    display: none;
+  }
+
+  .nav-drawer ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .nav-drawer a {
+    display: block;
+    padding: var(--s-4) 0;
+    color: var(--text-invert-muted);
+    font-size: var(--t-md);
+    font-weight: 500;
+    text-decoration: none;
+    border-bottom: 1px solid var(--line-invert);
+  }
+
+  .nav-drawer a[aria-current='page'] {
+    color: var(--cut-light);
+  }
+
+  .nav-drawer-actions {
+    display: grid;
+    gap: var(--s-3);
+    margin-top: var(--s-5);
+  }
+
+  @media (max-width: 900px) {
+    .nav-links,
+    .nav-actions {
+      display: none;
+    }
+
+    .nav-toggle {
+      display: flex;
+      margin-left: auto;
+    }
+  }
+
+  @media (min-width: 901px) {
+    .nav-drawer {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  const toggle = document.getElementById('nav-toggle');
+  const drawer = document.getElementById('nav-drawer');
+
+  if (toggle && drawer) {
+    const setOpen = (open: boolean) => {
+      toggle.setAttribute('aria-expanded', String(open));
+      drawer.hidden = !open;
+    };
+
+    toggle.addEventListener('click', () => {
+      setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+    });
+
+    // Escape closes the drawer and returns focus to the control that opened it.
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
+        setOpen(false);
+        toggle.focus();
+      }
+    });
+
+    // Reset state if the viewport grows past the breakpoint while open.
+    const desktop = window.matchMedia('(min-width: 901px)');
+    desktop.addEventListener('change', (e) => {
+      if (e.matches) setOpen(false);
+    });
+  }
+</script>

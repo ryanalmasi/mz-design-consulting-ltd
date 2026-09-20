@@ -1,0 +1,302 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import { Image } from 'astro:assets';
+import Base from '@/layouts/Base.astro';
+import CtaBand from '@/components/CtaBand.astro';
+import ArticleCard from '@/components/ArticleCard.astro';
+
+export async function getStaticPaths() {
+  const articles = await getCollection('insights');
+  return articles
+    .filter((a) => !a.data.draft)
+    .map((article) => ({
+      params: { slug: article.id },
+      props: { article },
+    }));
+}
+
+interface Props {
+  article: CollectionEntry<'insights'>;
+}
+
+const { article } = Astro.props;
+const { data } = article;
+const { Content, headings } = await render(article);
+
+const published = data.published.toLocaleDateString('en-CA', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+
+const related = (await getCollection('insights'))
+  .filter((a) => a.id !== article.id && !a.data.draft)
+  .sort((a, b) => b.data.published.getTime() - a.data.published.getTime())
+  .slice(0, 3);
+
+// Only the top-level sections make a useful contents list.
+const toc = headings.filter((h) => h.depth === 2);
+---
+
+<Base
+  title={data.title}
+  description={data.summary}
+  article={{
+    published: data.published.toISOString(),
+    modified: data.updated?.toISOString(),
+    section: data.topic,
+  }}
+>
+  <article>
+    <header class="art-header band-ink">
+      <div class="container-narrow">
+        <a href="/insights" class="back data-sm">Engineering notes</a>
+        <p class="art-meta data-sm">
+          {data.topic}
+          <span class="art-dot" aria-hidden="true"></span>
+          {data.readingTime} min read
+        </p>
+        <h1>{data.title}</h1>
+        <p class="art-summary">{data.summary}</p>
+        <p class="art-date data-sm">
+          <time datetime={data.published.toISOString()}>{published}</time>
+        </p>
+      </div>
+    </header>
+
+    {
+      data.image && (
+        <div class="art-media">
+          <div class="container-narrow">
+            <Image
+              src={data.image}
+              alt={data.imageAlt ?? ''}
+              widths={[600, 900, 1200]}
+              sizes="(max-width: 860px) 100vw, 860px"
+              loading="eager"
+              class="art-img"
+            />
+          </div>
+        </div>
+      )
+    }
+
+    <div class="container-narrow art-body">
+      {
+        toc.length > 2 && (
+          <nav class="toc" aria-labelledby="toc-title">
+            <h2 class="toc-title" id="toc-title">
+              Contents
+            </h2>
+            <ol>
+              {toc.map((h) => (
+                <li>
+                  <a href={`#${h.slug}`}>{h.text}</a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )
+      }
+
+      <div class="prose">
+        <Content />
+      </div>
+    </div>
+  </article>
+
+  <section class="section band-inset">
+    <div class="container">
+      <h2>More notes</h2>
+      <hr class="rule related-rule" />
+      <div class="card-grid">
+        {related.map((a) => <ArticleCard article={a} />)}
+      </div>
+    </div>
+  </section>
+
+  <CtaBand
+    heading="Have a site with one of these problems?"
+    body="If something here sounds like a project you are working on, send us the details. We will tell you what the engineering involves."
+  />
+</Base>
+
+<style>
+  .art-header {
+    padding-block: var(--s-7) var(--s-8);
+  }
+
+  .back {
+    display: inline-block;
+    color: var(--cut-light);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    margin-bottom: var(--s-5);
+    padding-bottom: 2px;
+  }
+
+  .back:hover {
+    border-bottom-color: var(--cut-light);
+  }
+
+  .art-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--cut-light);
+    margin-bottom: var(--s-3);
+  }
+
+  .art-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.6;
+  }
+
+  .art-header h1 {
+    font-size: clamp(2rem, 5vw, 3.25rem);
+  }
+
+  .art-summary {
+    margin-top: var(--s-5);
+    font-size: var(--t-md);
+    line-height: var(--lh-loose);
+    color: var(--text-invert-muted);
+  }
+
+  .art-date {
+    margin-top: var(--s-5);
+  }
+
+  .art-media {
+    background: linear-gradient(to bottom, var(--bg-invert) 50%, transparent 50%);
+  }
+
+  .art-img {
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    object-fit: cover;
+    border-radius: var(--radius);
+  }
+
+  .art-body {
+    padding-block: var(--s-7) var(--s-8);
+  }
+
+  /* ---- Contents ---- */
+  .toc {
+    padding: var(--s-5);
+    margin-bottom: var(--s-7);
+    background: var(--bg-raised);
+    border: var(--border);
+    border-left: 3px solid var(--accent);
+  }
+
+  .toc-title {
+    font-family: var(--font-mono);
+    font-size: var(--t-2xs);
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: var(--s-3);
+  }
+
+  .toc ol {
+    margin: 0;
+    padding-left: var(--s-5);
+    display: grid;
+    gap: var(--s-2);
+  }
+
+  .toc a {
+    font-size: var(--t-sm);
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+
+  .toc a:hover {
+    color: var(--accent-text);
+    text-decoration: underline;
+  }
+
+  /* ---- Article prose ---- */
+  .prose {
+    font-size: var(--t-md);
+    line-height: var(--lh-loose);
+  }
+
+  .prose :global(p) {
+    margin-bottom: var(--s-5);
+    color: var(--text-muted);
+  }
+
+  .prose :global(h2) {
+    margin-top: var(--s-8);
+    margin-bottom: var(--s-4);
+    padding-top: var(--s-5);
+    border-top: var(--border-strong);
+    font-size: var(--t-xl);
+    scroll-margin-top: calc(var(--nav-h) + var(--s-5));
+  }
+
+  .prose :global(h3) {
+    margin-top: var(--s-6);
+    margin-bottom: var(--s-3);
+    font-size: var(--t-md);
+    scroll-margin-top: calc(var(--nav-h) + var(--s-5));
+  }
+
+  .prose :global(ul),
+  .prose :global(ol) {
+    margin-bottom: var(--s-5);
+    padding-left: var(--s-5);
+    color: var(--text-muted);
+  }
+
+  .prose :global(li) {
+    margin-bottom: var(--s-3);
+  }
+
+  .prose :global(li)::marker {
+    color: var(--accent-text);
+  }
+
+  .prose :global(strong) {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .prose :global(hr) {
+    border: 0;
+    border-top: var(--border-strong);
+    margin-block: var(--s-7);
+  }
+
+  /* The closing regulatory note in several articles. */
+  .prose :global(hr + p em),
+  .prose :global(em) {
+    font-size: var(--t-sm);
+  }
+
+  .prose :global(a) {
+    color: var(--accent-text);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .related-rule {
+    margin-top: var(--s-4);
+  }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: var(--s-5);
+    margin-top: var(--s-6);
+  }
+</style>

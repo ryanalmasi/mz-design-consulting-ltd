@@ -1,0 +1,75 @@
+---
+import SectionDiagram from './SectionDiagram.astro';
+
+interface Props {
+  title: string;
+  lead?: string;
+  /** Shown as a small chainage-style locator above the title on inner pages. */
+  parent?: { label: string; href: string };
+}
+
+const { title, lead, parent } = Astro.props;
+---
+
+<header class="page-header band-ink">
+  <div class="ph-diagram" aria-hidden="true">
+    <SectionDiagram bare />
+  </div>
+  <div class="container ph-body">
+    {
+      parent && (
+        <a href={parent.href} class="ph-parent data-sm">
+          {parent.label}
+        </a>
+      )
+    }
+    <h1>{title}</h1>
+    {lead && <p class="ph-lead">{lead}</p>}
+  </div>
+</header>
+
+<style>
+  .page-header {
+    position: relative;
+    overflow: hidden;
+    --muted-ink: var(--text-invert-muted);
+    padding-block: var(--s-8) var(--s-7);
+  }
+
+  /* The bare section diagram sits behind the heading as drawing texture,
+     held well back so it never competes with the type. */
+  .ph-diagram {
+    position: absolute;
+    inset: auto 0 -12% 0;
+    /* Held well back: at full strength the orange grade line cuts straight
+       through the lead paragraph. */
+    opacity: 0.16;
+    pointer-events: none;
+    mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.35) 45%, transparent 78%);
+  }
+
+  .ph-body {
+    position: relative;
+  }
+
+  .ph-parent {
+    display: inline-block;
+    color: var(--cut-light);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    margin-bottom: var(--s-4);
+    padding-bottom: 2px;
+  }
+
+  .ph-parent:hover {
+    border-bottom-color: var(--cut-light);
+  }
+
+  .ph-lead {
+    margin-top: var(--s-5);
+    max-width: var(--measure);
+    font-size: var(--t-md);
+    line-height: var(--lh-loose);
+    color: var(--text-invert-muted);
+  }
+</style>

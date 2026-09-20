@@ -1,0 +1,223 @@
+---
+/**
+ * A cut-and-fill cross section, drawn to scale as a real one would be.
+ *
+ * The existing ground is a survey polyline; the proposed grade is the straight
+ * designed line through it. Where the ground sits above the design line the
+ * material is cut, where it sits below it is filled — hatched in opposite
+ * directions the way a section is annotated.
+ *
+ * The geometry below was solved so the two surfaces cross exactly at
+ * x=281.5 and x=684, which is where the cut and fill regions meet.
+ *
+ * This is inline SVG: roughly 4 KB, no JavaScript, and sharp at any density.
+ */
+interface Props {
+  /** Hide the drawing annotations, for use as a quieter page header. */
+  bare?: boolean;
+  class?: string;
+}
+
+const { bare = false, class: className } = Astro.props;
+
+// Survey shots along the existing ground.
+const ground = [
+  [60, 300], [150, 285], [240, 250], [281.5, 233.85],
+  [330, 215], [420, 180], [510, 165], [600, 190], [684, 222.67],
+  [690, 225], [780, 235], [870, 258], [960, 270], [1050, 250], [1140, 225],
+] as const;
+
+const pts = (arr: readonly (readonly [number, number])[] | number[][]) =>
+  arr.map(([x, y]) => `${x} ${y}`).join(' L ');
+
+const groundPath = `M ${pts(ground)}`;
+
+// Proposed grade: a single design line at -2.78% across the section.
+const gradeLeft = [60, 240];
+const gradeRight = [1140, 210];
+
+// Fill left of the first crossing, cut between the crossings, fill after.
+const fillA = `M 60 240 L 281.5 233.85 L 240 250 L 150 285 L 60 300 Z`;
+const cut = `M 281.5 233.85 L 330 215 L 420 180 L 510 165 L 600 190 L 684 222.67 Z`;
+const fillB = `M 684 222.67 L 1140 210 L 1140 225 L 1050 250 L 960 270 L 870 258 L 780 235 L 690 225 Z`;
+
+const stations = [
+  [60, '0+000'], [330, '0+120'], [600, '0+240'], [870, '0+360'], [1140, '0+480'],
+] as const;
+---
+
+<figure class:list={['diagram', className]}>
+  <svg
+    viewBox="0 0 1200 400"
+    preserveAspectRatio="xMidYMid slice"
+    role="img"
+    aria-labelledby="diagram-title diagram-desc"
+  >
+    <title id="diagram-title">Cut and fill cross section</title>
+    <desc id="diagram-desc">
+      An engineering cross section showing an existing ground surface crossing a proposed design
+      grade. Material above the design line is cut and material below it is filled, so the
+      excavated volume balances the volume placed and no soil has to be hauled to or from the site.
+    </desc>
+
+    <defs>
+      <pattern id="hatch-cut" width="9" height="9" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+        <line x1="0" y1="0" x2="0" y2="9" stroke="var(--cut-light)" stroke-width="2.2" />
+      </pattern>
+      <pattern id="hatch-fill" width="9" height="9" patternTransform="rotate(-45)" patternUnits="userSpaceOnUse">
+        <line x1="0" y1="0" x2="0" y2="9" stroke="var(--fill-light)" stroke-width="2.2" />
+      </pattern>
+      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.12" />
+      </pattern>
+    </defs>
+
+    <rect width="1200" height="400" fill="url(#grid)" />
+
+    <!-- Subgrade tone beneath the lower of the two surfaces -->
+    <path d={`${groundPath} L 1140 400 L 60 400 Z`} fill="currentColor" fill-opacity="0.06" />
+
+    <!-- Cut and fill regions -->
+    <g class="regions">
+      <path d={fillA} fill="url(#hatch-fill)" fill-opacity="0.55" />
+      <path d={fillB} fill="url(#hatch-fill)" fill-opacity="0.55" />
+      <path d={cut} fill="url(#hatch-cut)" fill-opacity="0.65" />
+    </g>
+
+    <!-- Existing ground: the surveyed surface -->
+    <path
+      d={groundPath}
+      fill="none"
+      stroke="currentColor"
+      stroke-opacity="0.55"
+      stroke-width="2.5"
+      stroke-linejoin="round"
+      stroke-dasharray="10 6"
+    />
+
+    <!-- Survey shots -->
+    <g fill="currentColor" fill-opacity="0.4">
+      {ground.map(([x, y]) => <circle cx={x} cy={y} r="3" />)}
+    </g>
+
+    <!-- Proposed grade: the designed line, drawn heaviest because it is the deliverable -->
+    <line
+      class="grade-line"
+      x1={gradeLeft[0]}
+      y1={gradeLeft[1]}
+      x2={gradeRight[0]}
+      y2={gradeRight[1]}
+      stroke="var(--cut-light)"
+      stroke-width="4"
+      stroke-linecap="round"
+    />
+
+    {
+      !bare && (
+        <g class="annotations">
+          {/* Station chainages along the base */}
+          <line x1="60" y1="352" x2="1140" y2="352" stroke="currentColor" stroke-opacity="0.25" stroke-width="1.5" />
+          {stations.map(([x, label]) => (
+            <g>
+              <line x1={x} y1="346" x2={x} y2="358" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.5" />
+              <text x={x} y="378" text-anchor="middle" class="tick">{label}</text>
+            </g>
+          ))}
+
+          {/* Region callouts, placed inside the region they name */}
+          <text x="470" y="150" text-anchor="middle" class="callout callout-cut">CUT</text>
+          <text x="920" y="300" text-anchor="middle" class="callout callout-fill">FILL</text>
+
+          {/* Surface labels with leaders */}
+          <g class="leader">
+            <line x1="200" y1="196" x2="200" y2="272" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5" />
+            <circle cx="200" cy="272" r="3.5" fill="currentColor" fill-opacity="0.5" />
+            <text x="200" y="184" text-anchor="middle" class="tick">EXISTING GROUND</text>
+          </g>
+          <g class="leader">
+            <line x1="1010" y1="212" x2="1010" y2="163" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5" />
+            <circle cx="1010" cy="212" r="3.5" fill="var(--cut-light)" />
+            <text x="1010" y="150" text-anchor="middle" class="tick tick-accent">PROPOSED GRADE</text>
+          </g>
+        </g>
+      )
+    }
+  </svg>
+</figure>
+
+<style>
+  .diagram {
+    /* The container crops rather than shrinks, so annotation text stays
+       readable on a phone instead of scaling down to 4px. */
+    height: clamp(230px, 27vw, 350px);
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    color: var(--text-invert);
+  }
+
+  .diagram svg {
+    width: max(100%, 860px);
+    height: 100%;
+    flex-shrink: 0;
+  }
+
+  .tick {
+    font-family: var(--font-mono);
+    font-size: 19px;
+    letter-spacing: 0.08em;
+    fill: currentColor;
+    fill-opacity: 0.55;
+  }
+
+  .tick-accent {
+    fill: var(--cut-light);
+    fill-opacity: 1;
+  }
+
+  .callout {
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+  }
+
+  .callout-cut {
+    fill: var(--cut-light);
+  }
+
+  .callout-fill {
+    fill: var(--fill-light);
+  }
+
+  /*
+   * The one orchestrated moment on the page: the design line draws itself
+   * through the existing ground, then the hatching resolves. It happens once,
+   * on load, and nothing else on the site animates on scroll.
+   */
+  @media (prefers-reduced-motion: no-preference) {
+    .grade-line {
+      stroke-dasharray: 1085;
+      stroke-dashoffset: 1085;
+      animation: draw-grade 900ms var(--ease) 150ms forwards;
+    }
+
+    .regions {
+      opacity: 0;
+      animation: resolve 600ms var(--ease) 850ms forwards;
+    }
+  }
+
+  @keyframes draw-grade {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes resolve {
+    to {
+      opacity: 1;
+    }
+  }
+</style>

@@ -1,0 +1,169 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  article: CollectionEntry<'insights'>;
+  /** Larger treatment for the lead article on the insights index. */
+  feature?: boolean;
+  priority?: boolean;
+  /**
+   * The card sits under a section h2 on the homepage but directly under the
+   * page h1 on the insights index, so the level has to be set by the caller
+   * rather than hard-coded — otherwise the index skips from h1 to h3.
+   */
+  headingLevel?: 2 | 3;
+}
+
+const { article, feature = false, priority = false, headingLevel = 3 } = Astro.props;
+const Heading = `h${headingLevel}` as 'h2' | 'h3';
+const { data } = article;
+const href = `/insights/${article.id}`;
+
+const published = data.published.toLocaleDateString('en-CA', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+---
+
+<article class:list={['article-card', { 'is-feature': feature }]}>
+  <a href={href} class="ac-link">
+    {
+      data.image && (
+        <div class="ac-media">
+          <Image
+            src={data.image}
+            alt={data.imageAlt ?? ''}
+            widths={[400, 700, 1000]}
+            sizes={feature ? '(max-width: 900px) 100vw, 60vw' : '(max-width: 640px) 100vw, 33vw'}
+            loading={priority ? 'eager' : 'lazy'}
+            class="ac-img"
+          />
+        </div>
+      )
+    }
+
+    <div class="ac-body">
+      <p class="ac-meta">
+        <span class="ac-topic">{data.topic}</span>
+        <span class="ac-dot" aria-hidden="true"></span>
+        <span class="data-sm">{data.readingTime} min read</span>
+      </p>
+      <Heading class="ac-title">{data.title}</Heading>
+      <p class="ac-summary">{data.summary}</p>
+      <p class="ac-date data-sm">
+        <time datetime={data.published.toISOString()}>{published}</time>
+      </p>
+    </div>
+  </a>
+</article>
+
+<style>
+  .article-card {
+    background: var(--bg-raised);
+    border: var(--border);
+    border-radius: var(--radius);
+    transition: border-color var(--dur) var(--ease);
+  }
+
+  .article-card:hover,
+  .article-card:focus-within {
+    border-color: var(--accent);
+  }
+
+  .ac-link {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .ac-media {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--bg-inset);
+  }
+
+  .ac-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .ac-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: var(--s-5);
+  }
+
+  .ac-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    margin-bottom: var(--s-3);
+  }
+
+  .ac-topic {
+    font-family: var(--font-mono);
+    font-size: var(--t-2xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-text);
+  }
+
+  .ac-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--datum-faint);
+  }
+
+  .ac-title {
+    font-size: var(--t-lg);
+    margin-bottom: var(--s-3);
+  }
+
+  .ac-link:hover .ac-title {
+    color: var(--accent-text);
+  }
+
+  .ac-summary {
+    font-size: var(--t-sm);
+    line-height: var(--lh-body);
+    color: var(--text-muted);
+  }
+
+  .ac-date {
+    margin: auto 0 0;
+    padding-top: var(--s-4);
+  }
+
+  /* The lead article runs image beside text at wide sizes. */
+  @media (min-width: 900px) {
+    .is-feature .ac-link {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+    }
+
+    .is-feature .ac-media {
+      aspect-ratio: auto;
+      height: 100%;
+    }
+
+    .is-feature .ac-body {
+      padding: var(--s-7);
+    }
+
+    .is-feature .ac-title {
+      font-size: var(--t-xl);
+      font-family: var(--font-display);
+    }
+
+    .is-feature .ac-summary {
+      font-size: var(--t-base);
+    }
+  }
+</style>

@@ -1,0 +1,367 @@
+---
+/**
+ * The footer is a drawing title block.
+ *
+ * A real title block carries the firm, the permit to practice, who drew and
+ * checked the sheet, the revision, and the date. Building the footer this way
+ * means the contact details and professional registration are part of the
+ * structure rather than an afterthought — which is the fix for the old site
+ * having no phone number, email or registration anywhere on any page.
+ */
+import { site, contact, credentials, serviceAreas, nav, isTodo } from '@/site.config';
+import Todo from './Todo.astro';
+import Logo from './Logo.astro';
+
+const year = new Date().getFullYear();
+const revised = new Date().toISOString().slice(0, 10);
+
+const services = [
+  { label: 'Site grading & earthworks', href: '/services#grading' },
+  { label: 'Stormwater management', href: '/services#stormwater' },
+  { label: 'Transportation & access', href: '/services#transportation' },
+  { label: 'Industrial site development', href: '/services#industrial' },
+  { label: 'Municipal infrastructure', href: '/services#municipal' },
+  { label: 'Civil 3D & construction support', href: '/services#civil3d' },
+];
+
+const ab = serviceAreas.filter((a) => a.region === 'AB');
+const bc = serviceAreas.filter((a) => a.region === 'BC');
+---
+
+<footer class="title-block">
+  <div class="container">
+    <!-- Row 1: contact — the reason this block exists -->
+    <div class="tb-contact">
+      <div class="tb-cell tb-identity">
+        <Logo />
+        <p class="tb-blurb">
+          Civil engineering consultants working across Alberta and British Columbia — grading,
+          earthworks, stormwater, drainage, roads and Civil 3D, from feasibility through
+          construction.
+        </p>
+      </div>
+
+      <div class="tb-cell">
+        <h2 class="tb-label">Telephone</h2>
+        {
+          isTodo(contact.phone) ? (
+            <p class="tb-value"><Todo value={contact.phone} /></p>
+          ) : (
+            <p class="tb-value">
+              <a href={`tel:${contact.phoneHref}`} class="data">{contact.phone}</a>
+            </p>
+          )
+        }
+        <p class="tb-note">{contact.hours}</p>
+      </div>
+
+      <div class="tb-cell">
+        <h2 class="tb-label">Email</h2>
+        {
+          isTodo(contact.email) ? (
+            <p class="tb-value"><Todo value={contact.email} /></p>
+          ) : (
+            <p class="tb-value"><a href={`mailto:${contact.email}`}>{contact.email}</a></p>
+          )
+        }
+        <p class="tb-note">Replies {contact.responseTime}</p>
+      </div>
+
+      <div class="tb-cell">
+        <h2 class="tb-label">Office</h2>
+        <p class="tb-value tb-address">
+          <Todo value={contact.address.street} />,
+          <Todo value={contact.address.city} />
+          <Todo value={contact.address.region} />
+        </p>
+      </div>
+    </div>
+
+    <hr class="tb-rule" />
+
+    <!-- Row 2: navigation columns -->
+    <div class="tb-columns">
+      <div class="tb-cell">
+        <h2 class="tb-label">Services</h2>
+        <ul class="tb-list">
+          {services.map((s) => <li><a href={s.href}>{s.label}</a></li>)}
+        </ul>
+      </div>
+
+      <div class="tb-cell">
+        <h2 class="tb-label">Company</h2>
+        <ul class="tb-list">
+          {nav.map((n) => <li><a href={n.href}>{n.label}</a></li>)}
+        </ul>
+      </div>
+
+      <div class="tb-cell tb-areas">
+        <h2 class="tb-label">Service areas</h2>
+        <div class="tb-region">
+          <span class="tb-region-name">Alberta</span>
+          <span class="tb-region-cities">{ab.map((a) => a.city).join(', ')}</span>
+        </div>
+        <div class="tb-region">
+          <span class="tb-region-name">British Columbia</span>
+          <span class="tb-region-cities">{bc.map((a) => a.city).join(', ')}</span>
+        </div>
+      </div>
+    </div>
+
+    <hr class="tb-rule" />
+
+    <!-- Row 3: the stamp strip — permit numbers, revision, sheet -->
+    <div class="tb-stamp">
+      <div class="tb-stamp-cell">
+        <span class="tb-label">Permit to practice</span>
+        <span class="data-sm tb-permit">
+          APEGA <Todo value={credentials.apegaPermit} fallback="TODO" />
+          <span class="tb-sep" aria-hidden="true"></span>
+          EGBC <Todo value={credentials.egbcPermit} fallback="TODO" />
+        </span>
+      </div>
+
+      <div class="tb-stamp-cell">
+        <span class="tb-label">Revised</span>
+        <span class="data-sm"><time datetime={revised}>{revised}</time></span>
+      </div>
+
+      <div class="tb-stamp-cell tb-stamp-copy">
+        <span class="tb-label">&copy; {year}</span>
+        <span class="data-sm">{site.legalName}</span>
+      </div>
+
+      {
+        !isTodo(contact.linkedin) && (
+          <a href={contact.linkedin} class="tb-social" rel="noopener">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-4 0v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
+              <circle cx="4" cy="4" r="2" />
+            </svg>
+            <span class="visually-hidden">{site.name} on LinkedIn</span>
+          </a>
+        )
+      }
+    </div>
+  </div>
+</footer>
+
+<style>
+  .title-block {
+    background: var(--bg-invert);
+    color: var(--text-invert);
+    /* Dark ground: flip the muted ink that .data-sm and .muted read. */
+    --muted-ink: var(--text-invert-muted);
+    border-top: 3px solid var(--cut-light);
+    padding-block: var(--s-8) var(--s-6);
+  }
+
+  /* Title-block cells are separated by rules, the way the real thing is. */
+  .tb-contact {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: var(--s-6);
+  }
+
+  .tb-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr;
+    gap: var(--s-6);
+    padding-block: var(--s-6);
+  }
+
+  .tb-identity :global(.logo) {
+    color: var(--text-invert);
+  }
+
+  .tb-blurb {
+    margin-top: var(--s-4);
+    max-width: 44ch;
+    font-size: var(--t-sm);
+    line-height: var(--lh-body);
+    color: var(--text-invert-muted);
+  }
+
+  .tb-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--t-2xs);
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--datum-faint);
+    margin-bottom: var(--s-2);
+  }
+
+  .tb-value {
+    font-size: var(--t-md);
+    font-weight: 500;
+    line-height: var(--lh-snug);
+  }
+
+  .tb-value a {
+    color: var(--text-invert);
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--cut-light) 50%, transparent);
+    padding-bottom: 2px;
+  }
+
+  .tb-value a:hover {
+    border-bottom-color: var(--cut-light);
+    color: var(--cut-light);
+  }
+
+  .tb-address {
+    font-size: var(--t-sm);
+    font-weight: 400;
+    color: var(--text-invert-muted);
+  }
+
+  .tb-note {
+    margin-top: var(--s-2);
+    font-size: var(--t-xs);
+    color: var(--text-invert-muted);
+  }
+
+  .tb-rule {
+    border: 0;
+    border-top: 1px solid var(--line-invert);
+    margin-top: var(--s-6);
+  }
+
+  .tb-list {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: var(--s-2);
+  }
+
+  .tb-list a {
+    color: var(--text-invert-muted);
+    font-size: var(--t-sm);
+    text-decoration: none;
+    /* Keeps the tap target comfortable without opening up the visual rhythm. */
+    display: inline-block;
+    padding-block: var(--s-1);
+  }
+
+  .tb-list a:hover {
+    color: var(--text-invert);
+  }
+
+  .tb-region {
+    display: flex;
+    gap: var(--s-3);
+    padding-block: var(--s-2);
+    font-size: var(--t-sm);
+  }
+
+  .tb-region + .tb-region {
+    border-top: 1px solid var(--line-invert);
+  }
+
+  .tb-region-name {
+    flex-shrink: 0;
+    width: 8.5rem;
+    font-weight: 600;
+  }
+
+  .tb-region-cities {
+    color: var(--text-invert-muted);
+  }
+
+  .tb-stamp {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-6);
+    padding-top: var(--s-5);
+  }
+
+  .tb-stamp-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .tb-stamp-cell .tb-label {
+    margin-bottom: 0;
+  }
+
+  .tb-permit {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    color: var(--text-invert-muted);
+  }
+
+  .tb-sep {
+    width: 1px;
+    height: 0.9em;
+    background: var(--line-invert);
+  }
+
+  .tb-stamp-copy {
+    margin-left: auto;
+  }
+
+  .tb-social {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line-invert);
+    border-radius: var(--radius);
+    color: var(--text-invert-muted);
+    transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+
+  .tb-social:hover {
+    color: var(--cut-light);
+    border-color: var(--cut-light);
+  }
+
+  @media (max-width: 1000px) {
+    .tb-contact {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .tb-identity {
+      grid-column: 1 / -1;
+    }
+
+    .tb-columns {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .tb-areas {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 620px) {
+    .tb-contact,
+    .tb-columns {
+      grid-template-columns: 1fr;
+      gap: var(--s-5);
+    }
+
+    .tb-region {
+      flex-direction: column;
+      gap: var(--s-1);
+    }
+
+    .tb-region-name {
+      width: auto;
+    }
+
+    .tb-stamp {
+      gap: var(--s-4);
+    }
+
+    .tb-stamp-copy {
+      margin-left: 0;
+    }
+  }
+</style>

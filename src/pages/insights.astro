@@ -1,0 +1,191 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '@/layouts/Base.astro';
+import PageHeader from '@/components/PageHeader.astro';
+import ArticleCard from '@/components/ArticleCard.astro';
+import CtaBand from '@/components/CtaBand.astro';
+
+const articles = (await getCollection('insights'))
+  .filter((a) => !a.data.draft)
+  .sort((a, b) => b.data.published.getTime() - a.data.published.getTime());
+
+const [lead, ...rest] = articles;
+
+const faqs = [
+  {
+    q: 'What is site grading, and why does it matter?',
+    a: 'Grading reshapes land to the finished elevations a project is built to. It establishes the finished ground level, directs surface drainage away from structures, provides suitable bearing conditions for buildings and paving, and has to satisfy the municipal standard. Poor grading produces drainage problems, excess construction cost, and returned submissions — and it is expensive to correct once the site is built.',
+  },
+  {
+    q: 'Why is stormwater management required for development?',
+    a: 'Development replaces permeable ground with hard surfaces, so less water infiltrates and more runs off, faster. Municipalities require stormwater management so that post-development peak flow does not exceed pre-development peak flow for the specified design storms. Most approvals require a stormwater report demonstrating compliance with the local standard.',
+  },
+  {
+    q: 'What do you need to start a grading design?',
+    a: 'Topographic survey data for existing conditions; a site plan showing proposed building footprints and paved areas; existing and proposed utility information; the applicable municipal design standards; any geotechnical data available; and the project drainage requirements. Where a geotechnical report exists, its shrinkage factors and material suitability findings materially affect the earthwork result.',
+  },
+  {
+    q: 'How is earthwork volume calculated?',
+    a: 'By comparing the existing ground surface to the proposed design surface. Both are built as digital terrain models, and the volumetric difference between them gives cut and fill. That raw number is a bank volume; topsoil stripping, shrinkage, unsuitable material and subgrade over-excavation are adjustments that sit between it and what actually gets hauled.',
+  },
+  {
+    q: 'What is cut and fill balance, and why does it reduce cost?',
+    a: 'Balance means the volume excavated from high areas equals the volume needed to fill low areas, so no material is imported or exported. The saving is larger than the material cost alone: it removes haul, truck traffic through the surrounding road network, the schedule constraint of truck cycle times, and the risk of imported fill failing acceptance testing.',
+  },
+  {
+    q: 'When should a civil engineer get involved?',
+    a: 'During feasibility and site selection, before the layout is fixed. Early involvement identifies the constraints that determine project viability and cost — topography, drainage, utilities, regulatory requirements — while there is still room to respond to them. Once building footprints, road alignments and servicing inverts are locked, most of the grading and earthwork levers are gone.',
+  },
+  {
+    q: 'What are the benefits of proper drainage design?',
+    a: 'It prevents surface ponding, foundation moisture problems and pavement failure; it keeps the site usable and safe during and after rain events; it satisfies the municipal requirement for approval; and on industrial sites it is what keeps clean runoff separate from potentially contaminated runoff, which is an operating cost for the life of the facility.',
+  },
+];
+---
+
+<Base
+  title="Engineering insights"
+  description="Practical civil engineering articles on earthwork balance, stormwater pond design, site grading, Civil 3D quantities, industrial site development, and municipal approvals in Alberta and British Columbia."
+>
+  <PageHeader
+    title="Engineering notes"
+    lead="Written by the people doing the work, on the problems that actually come up — earthwork balance, pond sizing, quantity accuracy, and getting through municipal review the first time."
+  />
+
+  <section class="section">
+    <div class="container">
+      {lead && <ArticleCard article={lead} feature priority headingLevel={2} />}
+
+      {
+        rest.length > 0 && (
+          <div class="card-grid">
+            {rest.map((a) => (
+              <ArticleCard article={a} headingLevel={2} />
+            ))}
+          </div>
+        )
+      }
+    </div>
+  </section>
+
+  <section class="section band-inset" id="faq">
+    <div class="container-narrow">
+      <h2>Common questions</h2>
+      <p class="faq-lead muted">
+        The questions developers, contractors and project managers ask most often.
+      </p>
+
+      <div class="faq-list">
+        {
+          faqs.map((f) => (
+            <details class="faq">
+              <summary>
+                <span class="faq-q">{f.q}</span>
+                <span class="faq-icon" aria-hidden="true" />
+              </summary>
+              <div class="faq-a">
+                <p>{f.a}</p>
+              </div>
+            </details>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <CtaBand />
+</Base>
+
+<style>
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--s-5);
+    margin-top: var(--s-5);
+  }
+
+  .faq-lead {
+    margin-top: var(--s-3);
+    max-width: var(--measure);
+  }
+
+  .faq-list {
+    margin-top: var(--s-6);
+    border-top: var(--border-strong);
+  }
+
+  /*
+   * Native <details>/<summary>. Keyboard operable, works without JavaScript,
+   * and announces its own expanded state — none of which was true of the
+   * accordion on the old site.
+   */
+  .faq {
+    border-bottom: var(--border);
+  }
+
+  .faq summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-4);
+    padding-block: var(--s-4);
+    min-height: 56px;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .faq summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-q {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--t-md);
+    line-height: var(--lh-snug);
+  }
+
+  .faq summary:hover .faq-q {
+    color: var(--accent-text);
+  }
+
+  .faq-icon {
+    position: relative;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+  }
+
+  .faq-icon::before,
+  .faq-icon::after {
+    content: '';
+    position: absolute;
+    background: var(--accent-text);
+    transition: transform var(--dur) var(--ease);
+  }
+
+  .faq-icon::before {
+    inset: 7px 0;
+    height: 2px;
+  }
+
+  .faq-icon::after {
+    inset: 0 7px;
+    width: 2px;
+  }
+
+  /* The vertical stroke rotates away, so the plus becomes a minus. */
+  .faq[open] .faq-icon::after {
+    transform: rotate(90deg);
+  }
+
+  .faq-a {
+    padding-bottom: var(--s-5);
+    max-width: var(--measure);
+  }
+
+  .faq-a p {
+    line-height: var(--lh-loose);
+    color: var(--text-muted);
+  }
+</style>

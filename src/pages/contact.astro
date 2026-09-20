@@ -1,0 +1,684 @@
+---
+import Base from '@/layouts/Base.astro';
+import PageHeader from '@/components/PageHeader.astro';
+import Todo from '@/components/Todo.astro';
+import { contact, serviceAreas, projectTypes, forms, isTodo } from '@/site.config';
+
+const phoneReady = !isTodo(contact.phone);
+const emailReady = !isTodo(contact.email);
+const turnstileReady = !isTodo(forms.turnstileSiteKey);
+
+const ab = serviceAreas.filter((a) => a.region === 'AB');
+const bc = serviceAreas.filter((a) => a.region === 'BC');
+---
+
+<Base
+  title="Contact"
+  description="Contact M&Z Design Consulting about a civil engineering project in Alberta or British Columbia. Grading, earthworks, stormwater, drainage, roads and Civil 3D."
+>
+  <PageHeader
+    title="Start a project"
+    lead="Tell us about the site. The more you can say about the constraints and the timeline, the more useful our first response will be."
+  />
+
+  <section class="section">
+    <div class="container contact-layout">
+      <!-- ---- Direct contact first: a form is not the only way in ---- -->
+      <aside class="contact-direct">
+        <h2 class="direct-title">Reach us directly</h2>
+        <hr class="rule" />
+
+        <dl class="direct-list">
+          <div class="direct-item">
+            <dt>Telephone</dt>
+            <dd>
+              {
+                phoneReady ? (
+                  <a href={`tel:${contact.phoneHref}`} class="data direct-link">
+                    {contact.phone}
+                  </a>
+                ) : (
+                  <Todo value={contact.phone} />
+                )
+              }
+            </dd>
+          </div>
+
+          <div class="direct-item">
+            <dt>Email</dt>
+            <dd>
+              {
+                emailReady ? (
+                  <a href={`mailto:${contact.email}`} class="direct-link">
+                    {contact.email}
+                  </a>
+                ) : (
+                  <Todo value={contact.email} />
+                )
+              }
+            </dd>
+          </div>
+
+          <div class="direct-item">
+            <dt>Hours</dt>
+            <dd class="direct-plain">{contact.hours}</dd>
+          </div>
+
+          <div class="direct-item">
+            <dt>Office</dt>
+            <dd class="direct-plain">
+              <Todo value={contact.address.street} />,
+              <Todo value={contact.address.city} />
+              <Todo value={contact.address.region} />
+            </dd>
+          </div>
+        </dl>
+
+        <h2 class="direct-title direct-title-areas">Where we work</h2>
+        <hr class="rule" />
+        <div class="areas">
+          <div class="area">
+            <h3>Alberta</h3>
+            <p>{ab.map((a) => a.city).join(', ')}</p>
+          </div>
+          <div class="area">
+            <h3>British Columbia</h3>
+            <p>{bc.map((a) => a.city).join(', ')}</p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ---- The form ---- -->
+      <div class="contact-form-wrap">
+        <h2 class="form-heading">Project enquiry</h2>
+        <p class="form-intro muted">
+          We reply {contact.responseTime}. Fields marked <span aria-hidden="true">*</span>
+          <span class="visually-hidden">with an asterisk</span> are required.
+        </p>
+
+        <form id="contact-form" class="form" novalidate method="post" action={forms.endpoint}>
+          <!--
+            Error summary. Focus moves here after a failed submit, and each item
+            links to the field it belongs to.
+          -->
+          <div
+            class="error-summary"
+            id="error-summary"
+            role="alert"
+            tabindex="-1"
+            hidden
+            aria-labelledby="error-summary-title"
+          >
+            <h3 id="error-summary-title">There is a problem</h3>
+            <ul id="error-summary-list"></ul>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="name">Your name <span aria-hidden="true">*</span></label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                required
+                autocomplete="name"
+                aria-describedby="name-error"
+              />
+              <p class="field-error" id="name-error" hidden></p>
+            </div>
+
+            <div class="field">
+              <label for="company">Company</label>
+              <input type="text" id="company" name="company" autocomplete="organization" />
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="email">Email <span aria-hidden="true">*</span></label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                autocomplete="email"
+                inputmode="email"
+                aria-describedby="email-error"
+              />
+              <p class="field-error" id="email-error" hidden></p>
+            </div>
+
+            <div class="field">
+              <label for="phone">Phone</label>
+              <input type="tel" id="phone" name="phone" autocomplete="tel" inputmode="tel" />
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="projectType">Project type <span aria-hidden="true">*</span></label>
+              <select id="projectType" name="projectType" required aria-describedby="projectType-error">
+                <option value="">Choose one</option>
+                {projectTypes.map((t) => <option value={t}>{t}</option>)}
+              </select>
+              <p class="field-error" id="projectType-error" hidden></p>
+            </div>
+
+            <div class="field">
+              <label for="location">Project location</label>
+              <input
+                type="text"
+                id="location"
+                name="location"
+                placeholder="e.g. Grande Prairie, AB"
+              />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="message">About the project <span aria-hidden="true">*</span></label>
+            <p class="field-hint" id="message-hint">
+              Site size, timeline, what stage it is at, and any constraint you already know about.
+            </p>
+            <textarea
+              id="message"
+              name="message"
+              rows="7"
+              required
+              aria-describedby="message-hint message-error"></textarea>
+            <p class="field-error" id="message-error" hidden></p>
+          </div>
+
+          <!-- Honeypot. Hidden from people, tempting to naive bots. -->
+          <div class="hp" aria-hidden="true">
+            <label for="website">Do not fill this in</label>
+            <input type="text" id="website" name="website" tabindex="-1" autocomplete="off" />
+          </div>
+
+          {
+            turnstileReady && (
+              <div
+                class="cf-turnstile"
+                data-sitekey={String(forms.turnstileSiteKey)}
+                data-theme="auto"
+              />
+            )
+          }
+
+          <button type="submit" class="btn btn-primary form-submit" id="submit-btn">
+            <span class="submit-label">Send enquiry</span>
+          </button>
+
+          <p class="form-note muted" id="form-note">
+            We use what you send here to respond to your enquiry. Nothing else.
+          </p>
+        </form>
+
+        <!-- Replaces the form on success. -->
+        <div class="form-success" id="form-success" hidden tabindex="-1">
+          <h2>Enquiry sent</h2>
+          <p>
+            Thanks — we have it. You will hear back from us {contact.responseTime}.
+            {
+              phoneReady && (
+                <Fragment>
+                  {' '}
+                  If it is urgent, call <a href={`tel:${contact.phoneHref}`}>{contact.phone}</a>.
+                </Fragment>
+              )
+            }
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+{turnstileReady && <script is:inline async defer src="https://challenges.cloudflare.com/turnstile/v0/api.js" />}
+
+<style>
+  .contact-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: var(--s-8);
+    align-items: start;
+  }
+
+  /* ---- Direct contact ---- */
+  .direct-title {
+    font-family: var(--font-mono);
+    font-size: var(--t-2xs);
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: var(--s-3);
+  }
+
+  .direct-title-areas {
+    margin-top: var(--s-7);
+  }
+
+  .direct-list {
+    margin: 0;
+  }
+
+  .direct-item {
+    padding-block: var(--s-4);
+    border-bottom: var(--border);
+  }
+
+  .direct-item dt {
+    font-size: var(--t-2xs);
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: var(--s-2);
+  }
+
+  .direct-item dd {
+    margin: 0;
+    font-size: var(--t-md);
+    font-weight: 500;
+  }
+
+  .direct-plain {
+    font-size: var(--t-sm);
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
+  .direct-link {
+    color: var(--text);
+    text-decoration: none;
+    border-bottom: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    padding-bottom: 2px;
+  }
+
+  .direct-link:hover {
+    border-bottom-color: var(--accent);
+    color: var(--accent-text);
+  }
+
+  .areas {
+    display: grid;
+    gap: var(--s-4);
+    margin-top: var(--s-4);
+  }
+
+  .area h3 {
+    font-size: var(--t-sm);
+    margin-bottom: var(--s-1);
+  }
+
+  .area p {
+    font-size: var(--t-sm);
+    line-height: var(--lh-body);
+    color: var(--text-muted);
+  }
+
+  /* ---- Form ---- */
+  .form-heading {
+    font-size: var(--t-xl);
+  }
+
+  .form-intro {
+    margin-top: var(--s-2);
+    font-size: var(--t-sm);
+  }
+
+  .form {
+    margin-top: var(--s-6);
+    display: grid;
+    gap: var(--s-5);
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-5);
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .field label {
+    font-size: var(--t-sm);
+    font-weight: 600;
+    margin-bottom: var(--s-2);
+  }
+
+  .field label span {
+    color: var(--accent-text);
+  }
+
+  .field-hint {
+    font-size: var(--t-xs);
+    color: var(--text-muted);
+    margin-bottom: var(--s-2);
+    margin-top: calc(var(--s-1) * -1);
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    /* 16px prevents iOS zooming the viewport on focus. */
+    font-size: var(--t-base);
+    min-height: 48px;
+    padding: var(--s-3) var(--s-4);
+    background: var(--bg-raised);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    color: var(--text);
+    transition: border-color var(--dur) var(--ease);
+  }
+
+  .field textarea {
+    min-height: auto;
+    line-height: var(--lh-body);
+    resize: vertical;
+  }
+
+  .field input:hover,
+  .field select:hover,
+  .field textarea:hover {
+    border-color: var(--text-muted);
+  }
+
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus {
+    border-color: var(--accent);
+  }
+
+  .field :global(.is-invalid),
+  .field input[aria-invalid='true'],
+  .field select[aria-invalid='true'],
+  .field textarea[aria-invalid='true'] {
+    border-color: var(--danger);
+    border-width: 2px;
+  }
+
+  /* An author `display` beats the UA sheet's [hidden] rule, so the attribute
+     has to be honoured explicitly or every field shows an empty error icon. */
+  .field-error[hidden] {
+    display: none;
+  }
+
+  .field-error {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--s-2);
+    margin-top: var(--s-2);
+    font-size: var(--t-sm);
+    font-weight: 500;
+    color: var(--danger);
+  }
+
+  /* Error state is marked by an icon as well as colour. */
+  .field-error::before {
+    content: '!';
+    flex-shrink: 0;
+    display: inline-grid;
+    place-items: center;
+    width: 1.15em;
+    height: 1.15em;
+    margin-top: 0.15em;
+    border-radius: 50%;
+    background: var(--danger);
+    color: #fff;
+    font-size: 0.8em;
+    font-weight: 700;
+  }
+
+  .error-summary {
+    padding: var(--s-5);
+    background: color-mix(in srgb, var(--danger) 8%, var(--bg-raised));
+    border: 2px solid var(--danger);
+    border-radius: var(--radius);
+  }
+
+  .error-summary[hidden] {
+    display: none;
+  }
+
+  .error-summary h3 {
+    font-size: var(--t-md);
+    color: var(--danger);
+    margin-bottom: var(--s-3);
+  }
+
+  .error-summary ul {
+    margin: 0;
+    padding-left: var(--s-5);
+    display: grid;
+    gap: var(--s-2);
+  }
+
+  .error-summary a {
+    color: var(--danger);
+    font-size: var(--t-sm);
+    font-weight: 500;
+  }
+
+  .hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .form-submit {
+    justify-self: start;
+    min-width: 200px;
+  }
+
+  .form-submit[aria-busy='true'] {
+    opacity: 0.7;
+    cursor: progress;
+  }
+
+  .form-note {
+    font-size: var(--t-xs);
+  }
+
+  .form-success {
+    padding: var(--s-7);
+    background: var(--bg-raised);
+    border: var(--border);
+    border-left: 3px solid var(--success);
+  }
+
+  .form-success[hidden] {
+    display: none;
+  }
+
+  .form-success h2 {
+    font-size: var(--t-xl);
+    margin-bottom: var(--s-3);
+  }
+
+  .form-success p {
+    line-height: var(--lh-loose);
+    color: var(--text-muted);
+  }
+
+  .form-success a {
+    color: var(--accent-text);
+    font-weight: 600;
+  }
+
+  @media (max-width: 900px) {
+    .contact-layout {
+      grid-template-columns: 1fr;
+      gap: var(--s-7);
+    }
+  }
+
+  @media (max-width: 620px) {
+    .field-row {
+      grid-template-columns: 1fr;
+      gap: var(--s-5);
+    }
+
+    .form-submit {
+      justify-self: stretch;
+    }
+  }
+</style>
+
+<script>
+  const form = document.getElementById('contact-form') as HTMLFormElement | null;
+  const summary = document.getElementById('error-summary');
+  const summaryList = document.getElementById('error-summary-list');
+  const success = document.getElementById('form-success');
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+
+  if (form && summary && summaryList && success && submitBtn) {
+    const label = submitBtn.querySelector('.submit-label') as HTMLElement;
+
+    type Rule = { id: string; label: string; check: (v: string) => string | null };
+
+    const rules: Rule[] = [
+      {
+        id: 'name',
+        label: 'Your name',
+        check: (v) => (v.trim() ? null : 'Enter your name'),
+      },
+      {
+        id: 'email',
+        label: 'Email',
+        check: (v) => {
+          if (!v.trim()) return 'Enter your email address';
+          // Deliberately permissive: the only authoritative test of an address
+          // is whether mail to it is delivered.
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
+            ? null
+            : 'Enter an email address in the format name@example.com';
+        },
+      },
+      {
+        id: 'projectType',
+        label: 'Project type',
+        check: (v) => (v ? null : 'Choose a project type'),
+      },
+      {
+        id: 'message',
+        label: 'About the project',
+        check: (v) =>
+          v.trim().length >= 20
+            ? null
+            : 'Tell us a little about the project — at least a sentence or two',
+      },
+    ];
+
+    const fieldOf = (id: string) =>
+      document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+
+    const showFieldError = (id: string, message: string | null) => {
+      const field = fieldOf(id);
+      const error = document.getElementById(`${id}-error`);
+      if (!field || !error) return;
+
+      if (message) {
+        field.setAttribute('aria-invalid', 'true');
+        error.textContent = message;
+        error.hidden = false;
+      } else {
+        field.removeAttribute('aria-invalid');
+        error.textContent = '';
+        error.hidden = true;
+      }
+    };
+
+    // Validate on blur once the field has been touched, not on every keystroke.
+    for (const rule of rules) {
+      const field = fieldOf(rule.id);
+      field?.addEventListener('blur', () => {
+        showFieldError(rule.id, rule.check(field.value));
+      });
+      // Clear an existing error as soon as the person fixes it.
+      field?.addEventListener('input', () => {
+        if (field.getAttribute('aria-invalid') === 'true') {
+          showFieldError(rule.id, rule.check(field.value));
+        }
+      });
+    }
+
+    const validate = () => {
+      const failures: Array<{ id: string; label: string; message: string }> = [];
+
+      for (const rule of rules) {
+        const field = fieldOf(rule.id);
+        const message = rule.check(field?.value ?? '');
+        showFieldError(rule.id, message);
+        if (message) failures.push({ id: rule.id, label: rule.label, message });
+      }
+
+      return failures;
+    };
+
+    const setBusy = (busy: boolean) => {
+      submitBtn.disabled = busy;
+      submitBtn.setAttribute('aria-busy', String(busy));
+      label.textContent = busy ? 'Sending…' : 'Send enquiry';
+    };
+
+    const showFormError = (message: string) => {
+      summaryList.innerHTML = `<li>${message}</li>`;
+      summary.hidden = false;
+      summary.focus();
+    };
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const failures = validate();
+
+      if (failures.length > 0) {
+        summaryList.innerHTML = failures
+          .map((f) => `<li><a href="#${f.id}">${f.message}</a></li>`)
+          .join('');
+        summary.hidden = false;
+        // Focus the summary rather than the first field, so the person hears
+        // how many problems there are before being dropped into one of them.
+        summary.focus();
+        return;
+      }
+
+      summary.hidden = true;
+      setBusy(true);
+
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          headers: { Accept: 'application/json' },
+          body: new FormData(form),
+        });
+
+        if (response.ok) {
+          form.hidden = true;
+          success.hidden = false;
+          success.focus();
+          return;
+        }
+
+        const body = await response.json().catch(() => ({}) as { error?: string });
+        showFormError(
+          body.error ??
+            'We could not send that. Try again, or email us directly and we will pick it up.'
+        );
+      } catch {
+        showFormError(
+          'We could not reach the server. Check your connection and try again, or email us directly.'
+        );
+      } finally {
+        setBusy(false);
+      }
+    });
+  }
+</script>

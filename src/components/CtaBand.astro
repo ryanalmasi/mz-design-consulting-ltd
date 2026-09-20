@@ -1,0 +1,75 @@
+---
+import { contact, isTodo } from '@/site.config';
+
+interface Props {
+  heading?: string;
+  body?: string;
+}
+
+const {
+  heading = 'Tell us about the site',
+  body = 'Send the constraints, the timeline and what you already know. We will tell you what the engineering actually involves — and if we are not the right fit, we will say so.',
+} = Astro.props;
+
+const phoneReady = !isTodo(contact.phone);
+---
+
+<section class="cta-band band-ink">
+  <div class="container cta-inner">
+    <div class="cta-text">
+      <h2>{heading}</h2>
+      <p>{body}</p>
+    </div>
+    <div class="cta-actions">
+      <a href="/contact" class="btn btn-primary">Start a project</a>
+      {
+        phoneReady && (
+          <a href={`tel:${contact.phoneHref}`} class="btn btn-on-ink">
+            Call {contact.phone}
+          </a>
+        )
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .cta-band {
+    padding-block: var(--s-8);
+    border-top: 1px solid var(--line-invert);
+  }
+
+  .cta-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-7);
+    flex-wrap: wrap;
+  }
+
+  .cta-text {
+    max-width: 52ch;
+  }
+
+  .cta-text p {
+    margin-top: var(--s-4);
+    color: var(--text-invert-muted);
+    line-height: var(--lh-loose);
+  }
+
+  .cta-actions {
+    display: flex;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 640px) {
+    .cta-actions {
+      width: 100%;
+    }
+
+    .cta-actions .btn {
+      flex: 1 1 100%;
+    }
+  }
+</style>

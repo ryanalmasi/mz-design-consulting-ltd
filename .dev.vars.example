@@ -1,0 +1,10 @@
+# Local development secrets for the Cloudflare Pages Function.
+# Copy to `.dev.vars` (gitignored) and fill in. Production values are set in
+# the Cloudflare dashboard, not here.
+
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
+CONTACT_TO=you@mzdesignconsulting.com
+CONTACT_FROM=website@mzdesignconsulting.com
+
+# Optional — enables bot screening. Leave unset to skip the Turnstile check.
+# TURNSTILE_SECRET=0x4xxxxxxxxxxxxxxxxxxxx

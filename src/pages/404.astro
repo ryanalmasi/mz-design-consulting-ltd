@@ -1,0 +1,71 @@
+---
+import Base from '@/layouts/Base.astro';
+import { nav } from '@/site.config';
+---
+
+<Base
+  title="Page not found"
+  description="That page does not exist on mzdesignconsulting.com."
+  noindex
+>
+  <section class="section nf">
+    <div class="container-narrow">
+      <p class="nf-code data">404</p>
+      <h1>That page is not here</h1>
+      <p class="nf-lead">
+        The link may be out of date, or the address may have a typo in it. Everything on the site
+        is reachable from here:
+      </p>
+      <ul class="nf-links">
+        <li><a href="/">Home</a></li>
+        {nav.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
+      </ul>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .nf {
+    padding-block: var(--s-10) var(--s-9);
+  }
+
+  .nf-code {
+    font-size: var(--t-sm);
+    letter-spacing: 0.2em;
+    color: var(--accent-text);
+    margin-bottom: var(--s-4);
+  }
+
+  .nf-lead {
+    margin-top: var(--s-5);
+    max-width: var(--measure);
+    font-size: var(--t-md);
+    line-height: var(--lh-loose);
+    color: var(--text-muted);
+  }
+
+  .nf-links {
+    list-style: none;
+    padding: 0;
+    margin-top: var(--s-6);
+    border-top: var(--border-strong);
+    max-width: 30rem;
+  }
+
+  .nf-links li {
+    border-bottom: var(--border);
+  }
+
+  .nf-links a {
+    display: block;
+    padding-block: var(--s-4);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--t-md);
+    text-decoration: none;
+  }
+
+  .nf-links a:hover {
+    color: var(--accent-text);
+  }
+</style>

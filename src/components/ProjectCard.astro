@@ -1,0 +1,158 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+  /** The first two cards on a grid get eager loading; the rest lazy. */
+  priority?: boolean;
+}
+
+const { project, priority = false } = Astro.props;
+const { data } = project;
+const href = `/projects/${project.id}`;
+---
+
+<article class="project-card" data-category={data.category}>
+  <a href={href} class="pc-link">
+    <div class="pc-media">
+      <Image
+        src={data.image}
+        alt={data.imageAlt}
+        widths={[400, 640, 900]}
+        sizes="(max-width: 640px) 100vw, (max-width: 1040px) 50vw, 33vw"
+        loading={priority ? 'eager' : 'lazy'}
+        decoding={priority ? 'sync' : 'async'}
+        class="pc-img"
+      />
+      <span class="pc-category">{data.category}</span>
+    </div>
+
+    <div class="pc-body">
+      <p class="pc-discipline data-sm">{data.discipline}</p>
+      <h3 class="pc-title">{data.title}</h3>
+      <p class="pc-summary">{data.summary}</p>
+
+      {
+        data.metrics.length > 0 && (
+          <dl class="pc-metrics">
+            {data.metrics.slice(0, 3).map((m) => (
+              <div class="pc-metric">
+                <dt class="visually-hidden">{m.label}</dt>
+                <dd class="pc-metric-value data">{m.value}</dd>
+                <dd class="pc-metric-label">{m.label}</dd>
+              </div>
+            ))}
+          </dl>
+        )
+      }
+    </div>
+  </a>
+</article>
+
+<style>
+  .project-card {
+    background: var(--bg-raised);
+    border: var(--border);
+    border-radius: var(--radius);
+    /* The whole card is a link; the border marks the hover, not a lift and a
+       drop shadow on every card in the grid. */
+    transition: border-color var(--dur) var(--ease);
+  }
+
+  .project-card:hover {
+    border-color: var(--accent);
+  }
+
+  .project-card:focus-within {
+    border-color: var(--accent);
+  }
+
+  .pc-link {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .pc-media {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background: var(--bg-inset);
+  }
+
+  .pc-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .pc-category {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: var(--s-1) var(--s-3);
+    background: var(--ink);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: var(--t-2xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .pc-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: var(--s-5);
+  }
+
+  .pc-discipline {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: var(--s-2);
+  }
+
+  .pc-title {
+    font-size: var(--t-lg);
+    margin-bottom: var(--s-3);
+  }
+
+  .pc-link:hover .pc-title {
+    color: var(--accent-text);
+  }
+
+  .pc-summary {
+    font-size: var(--t-sm);
+    line-height: var(--lh-body);
+    color: var(--text-muted);
+    margin-bottom: var(--s-4);
+  }
+
+  .pc-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-5);
+    margin: auto 0 0;
+    padding-top: var(--s-4);
+    border-top: var(--border);
+  }
+
+  .pc-metric-value {
+    margin: 0;
+    font-size: var(--t-lg);
+    font-weight: 500;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .pc-metric-label {
+    margin: var(--s-1) 0 0;
+    font-size: var(--t-2xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+</style>
