@@ -139,6 +139,21 @@ export const forms = {
   turnstileSiteKey: TODO('TODO: Cloudflare Turnstile site key'),
 } as const;
 
+/**
+ * Analytics.
+ *
+ * Cloudflare Web Analytics is cookieless and stores no client-side state, so it
+ * needs no consent banner under PIPEDA or GDPR. The beacon is only emitted once
+ * a real token is set here — until then the site ships no third-party script at
+ * all, rather than a tag that loads and measures nothing.
+ *
+ * TODO: The token is public (safe to commit). Cloudflare dashboard ->
+ * Web Analytics -> add site. See docs/DEPLOYMENT.md.
+ */
+export const analytics = {
+  cloudflareToken: TODO('TODO: Cloudflare Web Analytics beacon token'),
+} as const;
+
 export const projectTypes = [
   'Site grading',
   'Earthworks & mass haul',

@@ -18,7 +18,7 @@ checked, not assumed.
 
 ## Tier 1 — do these next
 
-### 1. Analytics — `TODO`
+### 1. Analytics — `DONE` (wired 2026-09-20, needs a token)
 
 **Effort:** ~15 minutes · **Impact:** high
 
@@ -27,17 +27,35 @@ the contact page, which service pulls traffic, which city visitors come from, or
 what share of sessions end in an enquiry. Every other decision in this document
 is guesswork until this exists.
 
-**Recommended:** Cloudflare Web Analytics. Free, cookieless, no client-side
-state, and therefore **no consent banner required under PIPEDA or GDPR**. It is
-already part of the platform the site is moving to, so there is no extra vendor.
+**Chosen:** Cloudflare Web Analytics. Free, cookieless, no client-side state,
+and therefore **no consent banner required under PIPEDA or GDPR**. It is already
+part of the platform the site is moving to, so there is no extra vendor.
 
-**How:** Cloudflare dashboard → Web Analytics → add site → it issues a single
-script tag. Add it to `src/layouts/Base.astro` before `</body>`.
+**What was built.** The code is done; one value is outstanding because it can
+only be issued by a Cloudflare account that does not exist yet.
 
-**One catch:** the CSP in `public/_headers` currently allows Turnstile and
-nothing else third-party. Add the analytics origin to `script-src` and
-`connect-src` or the browser will silently block it. This is the most likely way
-to install it and wrongly believe it is working — verify in the Network tab.
+- `analytics.cloudflareToken` in `src/site.config.ts`, following the same
+  `TODO()` placeholder pattern as the rest of that file.
+- `src/layouts/Base.astro` emits the beacon before `</body>` **only when the
+  token is a real value**. While it is a `TODO` the site ships no third-party
+  script at all, rather than a tag that loads and measures nothing.
+- CSP updated in `public/_headers`.
+- Setup and verification steps in [`DEPLOYMENT.md`](./DEPLOYMENT.md) §3f;
+  checklist entry as item 9 in [`TODO-BEFORE-LAUNCH.md`](./TODO-BEFORE-LAUNCH.md).
+
+**To finish:** paste the beacon token into `site.config.ts` and deploy.
+
+**The catch this item warned about, confirmed and handled.** It needs **two**
+hosts, not one, and they are different origins:
+
+| Directive | Host | Why |
+|---|---|---|
+| `script-src` | `https://static.cloudflareinsights.com` | serves `beacon.min.js` |
+| `connect-src` | `https://cloudflareinsights.com` | receives the POST to `/cdn-cgi/rum` |
+
+Allow only the first and the script loads, reports nothing, and looks perfectly
+installed in the page source. Both are now in the policy. **Still verify in the
+Network tab after deploying** — see §3f for exactly what to look for.
 
 *Alternatives if you want more depth: Plausible or Umami, both self-hostable,
 both paid or self-run. Avoid Google Analytics here — it needs a consent banner,
@@ -74,21 +92,44 @@ more work, rather than all 11. Expand once the pattern proves out in analytics
 
 ---
 
-### 3. Structured data gaps — `TODO`
+### 3. Structured data gaps — `DONE` (2026-09-20)
 
 **Effort:** ~1 hour · **Impact:** moderate, very cheap
 
-Currently emitted (verified in `dist/`): `ProfessionalService`, `WebSite`,
-`Article`. Missing:
+Was emitting: `ProfessionalService`, `WebSite`, `Article`. All three gaps are
+now closed, each reading from a data structure that already existed:
 
-| Schema | Where it goes | Why |
+| Schema | Where | Result |
 |---|---|---|
-| **`FAQPage`** | `src/pages/insights.astro` | **The clearest miss.** Seven FAQs are already written and on the page. This is free eligibility for expanded search results. |
-| **`BreadcrumbList`** | `src/layouts/Base.astro` | Changes how URLs render in search results. Derive from `canonicalPath`, which is already computed there. |
-| **`Service`** | `src/pages/services.astro` | One per discipline, from the `disciplines` array already in that file. |
+| **`FAQPage`** | `src/pages/insights.astro` | 7 Question/Answer pairs, mapped from the same `faqs` array the `<details>` list renders, so the two cannot drift. |
+| **`BreadcrumbList`** | `src/layouts/Base.astro` | On all 20 indexable pages. Skipped on the homepage (a one-item trail says nothing) and on `noindex` pages. |
+| **`Service`** | `src/pages/services.astro` | 6 nodes from the `disciplines` array, each anchored at its existing `#id` and deferring to the organization by `@id`. |
 
-All three read from data structures that already exist — this is wiring, not
-authoring. Validate with Google's Rich Results Test before calling it done.
+`Base.astro` gained a `schema?: Record<string, unknown>[]` prop. Page-level nodes
+are appended to the existing `@graph` rather than emitted as a second script
+element, so they can reference `#organization` by `@id` instead of restating the
+firm on every page.
+
+**Two things worth knowing, neither of which was obvious when this was written:**
+
+1. **The FAQ payoff is smaller than this item claimed.** Google restricted FAQ
+   rich results to authoritative government and health sites in 2023. Describing
+   it as "free eligibility for expanded search results" was wrong for a site like
+   this one — expanded results are very unlikely. The markup stays because it is
+   accurate, costs almost nothing, and is still read by other engines and by
+   assistants. Do not expect to see it in Google's SERP and conclude it is broken.
+2. **Breadcrumbs must be built from `canonicalPath`, not `Astro.url.pathname`** —
+   gotcha #1 in `CLAUDE.md` applies directly here. The raw pathname would have put
+   `/services.html` in the trail, disagreeing with the canonical tag. There is a
+   regression assertion for this.
+
+**Validation status — read this before calling it verified.** 650 structural
+assertions pass against `dist/` (JSON-LD parses, expected node types per page,
+every `@id` reference resolves, no `.html` in breadcrumb URLs, breadcrumb leaf
+agrees with the canonical tag, every marked-up FAQ and service name is actually
+rendered on its page). **Google's Rich Results Test has not been run**, because
+it needs a public URL and the site is not deployed yet. Run it against the
+`*.pages.dev` URL once Pages is up.
 
 ---
 
@@ -219,7 +260,7 @@ publication rather than filler.
 |---|---|
 | **Testimonials / client logos** | Needs written client permission. Strong when real. |
 | **Search over Insights** | Not worth it below ~20 articles. Currently 6. |
-| **Visible breadcrumbs** | Pairs with the `BreadcrumbList` schema in item 3. |
+| **Visible breadcrumbs** | The `BreadcrumbList` schema now exists (item 3), so this is just the UI. Google prefers the markup to mirror something visible, though it does not require it. |
 | **Dark mode toggle** | Dark mode works and is audited, but follows the OS only. A manual toggle is a nice-to-have; `tokens.css` already supports `[data-theme]`. |
 | **Print stylesheet for articles** | Only if people actually print them. |
 | **More articles** | Six is a credible start. Cadence beats volume — one good piece a quarter, P.Eng.-reviewed. |
@@ -258,5 +299,7 @@ Items **4** and **7**, and the blocking entries in
 this document. They are also the only ones that cannot be done by an engineer
 working alone — they need information and decisions from the business.
 
-If the choice is between shipping items 1–3 and spending the same time getting
-real photographs and permit numbers onto the site, **choose the latter**.
+Items 1 and 3 are now shipped, which cost an afternoon and changed none of the
+above. If the choice is between shipping the remaining technical items and
+spending the same time getting real photographs and permit numbers onto the site,
+**choose the latter**.

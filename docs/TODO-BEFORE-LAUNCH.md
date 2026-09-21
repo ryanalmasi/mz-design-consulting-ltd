@@ -1,8 +1,9 @@
 # Before this goes live
 
-Everything here is information only you have. Each item renders on the site as a
-yellow hazard-striped `TODO` marker until it is filled in, so nothing can ship
-silently missing.
+Everything here is information only you have. Every item but the last renders on
+the site as a yellow hazard-striped `TODO` marker until it is filled in, so
+nothing can ship silently missing. (Item 9, the analytics token, is the one
+exception — it has no visible surface to mark.)
 
 **Almost all of it lives in one file: `src/site.config.ts`.**
 
@@ -136,6 +137,23 @@ credibility than anything else on this list. Drop a new file into
 `src/assets/images/` and update the `image:` path in the relevant Markdown file —
 Astro regenerates every responsive size automatically.
 
+## 9. Analytics token — optional, but do it before launch
+
+`analytics.cloudflareToken` in `src/site.config.ts`.
+
+This is the one item on this list that does **not** render a yellow hazard
+stripe, because it lives in the page's `<head>`/`<body>` chrome rather than in
+visible content. Until it holds a real token, no analytics script is emitted at
+all — the site is simply not measured.
+
+Worth doing before launch rather than after: traffic from the first weeks is not
+recoverable retroactively, and every priority call in
+[`IMPROVEMENTS.md`](./IMPROVEMENTS.md) is guesswork without it.
+
+Cloudflare dashboard → Web Analytics → add site → copy the beacon token. Full
+steps, including how to confirm it is really reporting, are in
+[`DEPLOYMENT.md`](./DEPLOYMENT.md) §3f.
+
 ---
 
 ## Quick check before launch
@@ -144,6 +162,9 @@ Astro regenerates every responsive size automatically.
 npm run verify          # type check + build; fails on any content schema error
 grep -rn "TODO(" src/site.config.ts   # anything still unfilled
 ```
+
+Note that `analytics.cloudflareToken` (item 9) appears in that `grep` but, unlike
+everything else here, leaves no visible marker on the page.
 
 Then load the site and look for yellow hazard stripes. If you see none, every
 placeholder has been filled.

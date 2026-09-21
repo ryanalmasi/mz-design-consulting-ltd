@@ -256,3 +256,121 @@ and any city landing pages (11 service areas defined, 0 pages targeting them).
 
 Top of that backlog: analytics first, because without it every other priority
 call on the list is guesswork.
+
+---
+
+## Session 2 — 2026-09-20 — Analytics wiring and the structured-data gaps
+
+### Goal
+
+User asked to implement **items 1 and 3** of `docs/IMPROVEMENTS.md`: Cloudflare
+Web Analytics, and the three missing schema types (`FAQPage`, `BreadcrumbList`,
+`Service`). Items 2 and 4 were not in scope and were not touched.
+
+### Decisions
+
+- **Analytics is wired but disabled, behind a `TODO()` placeholder.** Confirmed
+  with the user that no Cloudflare account or beacon token exists yet. Rather
+  than hard-code a fake value or leave the work for later, `analytics
+  .cloudflareToken` follows the same placeholder pattern as the rest of
+  `site.config.ts`, and `Base.astro` emits the beacon **only when it is a real
+  value**. Going live is now a one-line edit. Verified both branches: 22/22
+  pages carry the beacon with a token set, 0/22 without.
+- **No visible `Todo.astro` hazard marker for the token**, unlike every other
+  placeholder in that file. A hazard stripe is a *content* affordance; this
+  value lives in page chrome and has no visible surface. The trade-off is that
+  it is the one pre-launch item that can be forgotten silently, so it got an
+  explicit entry (item 9) in `TODO-BEFORE-LAUNCH.md` and a correction to that
+  file's opening claim that *every* item renders a marker. **If you add a
+  config value with no visible output, do the same — do not reach for
+  `Todo.astro`.**
+- **Page-level JSON-LD is appended to the existing `@graph`, not emitted as a
+  second `<script>`.** `Base.astro` gained a `schema?: Record<string, unknown>[]`
+  prop. One graph means page nodes reference `#organization` by `@id` instead of
+  restating the firm on every page. If you are tempted to add a second ld+json
+  block, add to the graph instead.
+- **Breadcrumbs are derived from `canonicalPath`, never `Astro.url.pathname`.**
+  This is gotcha #1 landing exactly where the gotcha list predicted: the raw
+  pathname would have produced `https://…/services.html` in the trail while the
+  canonical tag says `/services`. There is a regression assertion for it.
+- **Breadcrumb labels: intermediate segments from `nav`, the leaf from the page
+  `title` prop.** That is what makes `/insights/earthwork-balancing` render as
+  *Home > Insights > What earthwork balance actually saves you* rather than
+  exposing the slug. It does mean `/insights` itself reads as *Home >
+  Engineering insights* (title) while its children say *Insights* (nav label).
+  Deliberate — the leaf describes the page, the parent names the section. Not a
+  bug to "fix" into consistency.
+- **`Service` nodes carry the two provinces in `areaServed`, not the 11 service
+  areas.** The organization node already enumerates every city; repeating them
+  across six services would have added 66 nodes saying nothing new.
+- **`hasOfferCatalog` for the `scope` bullets was deliberately omitted.** It is
+  the technically correct way to express sub-services, but nothing consumes it
+  and it would have roughly tripled the JSON-LD on that page. Raised with the
+  user, who did not ask for it. Reconsider only if something concrete needs it.
+
+### Corrected a claim in IMPROVEMENTS.md
+
+Item 3 described `FAQPage` as "free eligibility for expanded search results".
+**That is no longer true.** Google restricted FAQ rich results to authoritative
+government and health sites in 2023. The markup was still implemented — it is
+accurate, near-free, and read by other engines and assistants — but the backlog
+entry now says so plainly, so nobody deploys it, sees nothing in Google, and
+goes looking for a bug that is not there.
+
+### Changed
+
+- `src/site.config.ts` — new `analytics` export.
+- `src/layouts/Base.astro` — `schema` prop, `BreadcrumbList`, guarded beacon.
+- `src/pages/insights.astro` — `FAQPage` from the existing `faqs` array.
+- `src/pages/services.astro` — 6 × `Service` from the existing `disciplines`.
+- `public/_headers` — CSP: `static.cloudflareinsights.com` in `script-src`,
+  `cloudflareinsights.com` in `connect-src`. **Two different origins; both are
+  required.** Allow only the first and the beacon loads, reports nothing, and
+  looks correctly installed in the page source. This is the failure mode the
+  backlog warned about and it is a genuinely easy one to ship.
+- `docs/DEPLOYMENT.md` — new §3f, including how to confirm it is really
+  reporting, and a warning not to combine the config token with the dashboard's
+  automatic Pages injection (that yields two beacons and double-counted views).
+- `docs/TODO-BEFORE-LAUNCH.md` — item 9, plus the intro correction above.
+- `docs/IMPROVEMENTS.md` — items 1 and 3 marked `DONE` with outcomes.
+
+Not committed — the user had not asked at the time of writing.
+
+### Verified
+
+- `npm run verify` — **0 errors, 0 warnings, 0 hints**, 22 pages. Also re-run
+  with a real token substituted in, to confirm the fill-in path typechecks.
+- **650 structural assertions over `dist/`** via a throwaway Node script: every
+  page's JSON-LD parses, carries exactly one block and no escaped markup
+  (gotcha #6); expected node types per page; **every `@id` reference resolves to
+  a node defined on the same page**; no `.html` in any breadcrumb URL; each
+  breadcrumb leaf agrees with that page's canonical tag and `<title>`;
+  positions are contiguous from 1; trail depth matches path depth; all 7 FAQ
+  questions *and* their answers are actually rendered on the page (Google
+  requires the marked-up content to be visible); all 6 service names render and
+  each anchor `id` exists in the HTML; `FAQPage`/`Service` appear only on their
+  own pages; and no beacon or raw `__todo` object leaks into any output.
+- Beacon emission checked **both ways**: 22/22 pages with a token, 0/22 with the
+  placeholder.
+- Breadcrumb trails eyeballed on article, project, index and `noindex` pages.
+
+### Not done / next steps
+
+- **Google's Rich Results Test was NOT run.** It needs a public URL and nothing
+  is deployed. The validation above is structural and local. **Run it against
+  the `*.pages.dev` URL once Pages exists** before treating item 3 as fully
+  confirmed.
+- **The analytics beacon has never executed in a browser.** The tag is correct
+  and the CSP is correct by inspection, but "CSP allows it" is a claim that is
+  only proved by watching the POST to `/cdn-cgi/rum` return 204. §3f of
+  `DEPLOYMENT.md` says exactly what to look for.
+- **axe-core was not re-run.** These changes add zero visible UI — no rendered
+  markup changed on any page, only `<head>`/`<body>` script and JSON-LD content.
+  Flagged to the user, who did not ask for the sweep. If visible breadcrumbs are
+  added later (Tier 3), that *does* need a fresh axe pass.
+- **The verification script is ephemeral again**, in the job temp directory —
+  the same fate as last session's Playwright scripts. Offered to the user to
+  persist it under `tests/`; it is zero-dependency and would be a reasonable
+  first file there for backlog item 9 (CI). Not added unasked.
+- Items 2 and 4 of the backlog remain `TODO`, as do the 11 original launch
+  placeholders. Nothing pushed; branch `revamp` is still local.

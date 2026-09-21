@@ -4,6 +4,7 @@ import Base from '@/layouts/Base.astro';
 import PageHeader from '@/components/PageHeader.astro';
 import ArticleCard from '@/components/ArticleCard.astro';
 import CtaBand from '@/components/CtaBand.astro';
+import { site } from '@/site.config';
 
 const articles = (await getCollection('insights'))
   .filter((a) => !a.data.draft)
@@ -41,9 +42,30 @@ const faqs = [
     a: 'It prevents surface ponding, foundation moisture problems and pavement failure; it keeps the site usable and safe during and after rain events; it satisfies the municipal requirement for approval; and on industrial sites it is what keeps clean runoff separate from potentially contaminated runoff, which is an operating cost for the life of the facility.',
   },
 ];
+
+/**
+ * FAQPage over the questions rendered below. The markup must describe content
+ * that is actually visible on the page, which is why it maps the same array
+ * the <details> list renders rather than a separate copy.
+ *
+ * Note: Google restricted FAQ rich results to authoritative government and
+ * health sites in 2023, so this is unlikely to produce expanded results here.
+ * It stays because it is accurate, costs almost nothing, and still describes
+ * the page to engines and assistants that do read it.
+ */
+const faqSchema = {
+  '@type': 'FAQPage',
+  '@id': `${site.origin}/insights#faq`,
+  mainEntity: faqs.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+};
 ---
 
 <Base
+  schema={[faqSchema]}
   title="Engineering insights"
   description="Practical civil engineering articles on earthwork balance, stormwater pond design, site grading, Civil 3D quantities, industrial site development, and municipal approvals in Alberta and British Columbia."
 >

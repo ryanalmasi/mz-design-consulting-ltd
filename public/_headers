@@ -6,9 +6,13 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=(), interest-cohort=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
-  # Turnstile needs to load its script and frame its challenge; everything else
-  # on this site is same-origin.
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src https://challenges.cloudflare.com; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+  # Turnstile needs to load its script and frame its challenge. Cloudflare Web
+  # Analytics needs TWO hosts and they are not the same one: static.cloudflare-
+  # insights.com serves the beacon (script-src), cloudflareinsights.com receives
+  # the measurements at /cdn-cgi/rum (connect-src). Allow only the first and the
+  # beacon loads, reports nothing, and looks installed. Everything else on this
+  # site is same-origin.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://cloudflareinsights.com; frame-src https://challenges.cloudflare.com; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'
 
 # Fingerprinted build assets never change under the same name.
 /_astro/*

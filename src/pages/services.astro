@@ -2,6 +2,7 @@
 import Base from '@/layouts/Base.astro';
 import PageHeader from '@/components/PageHeader.astro';
 import CtaBand from '@/components/CtaBand.astro';
+import { site } from '@/site.config';
 
 const disciplines = [
   {
@@ -106,9 +107,33 @@ const process = [
     body: 'RFI responses, site inspections, field engineering, and as-built documentation.',
   },
 ];
+
+/**
+ * One Service node per discipline, built from the same array the page renders
+ * so the two cannot drift. Each is addressable at the anchor the discipline
+ * already has, and defers to the organization by @id rather than restating it.
+ *
+ * areaServed is the two provinces rather than all eleven service-area cities:
+ * the organization node already enumerates the cities, and repeating them on
+ * six services would add sixty-six nodes that say nothing new.
+ */
+const serviceSchema = disciplines.map((d) => ({
+  '@type': 'Service',
+  '@id': `${site.origin}/services#${d.id}`,
+  name: d.title,
+  description: d.body,
+  serviceType: 'Civil engineering',
+  url: `${site.origin}/services#${d.id}`,
+  provider: { '@id': `${site.origin}/#organization` },
+  areaServed: [
+    { '@type': 'State', name: 'Alberta' },
+    { '@type': 'State', name: 'British Columbia' },
+  ],
+}));
 ---
 
 <Base
+  schema={serviceSchema}
   title="Civil engineering services"
   description="Civil engineering services across Alberta and British Columbia: site grading and earthworks, stormwater management, road and access design, industrial site development, municipal infrastructure, and Civil 3D modelling."
 >

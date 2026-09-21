@@ -128,6 +128,47 @@ Submit a real enquiry through the deployed site and confirm it arrives. Then
 check the failure path still behaves — the form should report a problem rather
 than showing a false success, which is exactly what the old site did.
 
+### 3f. Web analytics (optional, 5 minutes)
+
+Cloudflare Web Analytics is cookieless and stores nothing on the client, so it
+needs **no consent banner** under PIPEDA or GDPR. The site is wired for it but
+ships it disabled.
+
+1. Cloudflare dashboard → **Web Analytics** → **Add a site** →
+   `mzdesignconsulting.com`.
+2. It issues a **beacon token** — a short hex string. It is public; committing it
+   is fine.
+3. Put it in `src/site.config.ts`:
+
+   ```ts
+   export const analytics = {
+     cloudflareToken: 'your-token-here',
+   } as const;
+   ```
+
+4. Rebuild and deploy. Until this is a real value **no analytics script is
+   emitted at all** — the site does not ship a beacon that quietly measures
+   nothing.
+
+**Do not use the dashboard's "automatic setup" toggle for Pages projects as
+well.** It injects its own beacon, and with the token also set in config you get
+two beacons and double-counted pageviews. Pick one; the config route is the one
+this repo documents.
+
+**Verifying it actually works.** A beacon that loads but cannot report looks
+identical to a working one in the page source. Open the deployed site with
+DevTools → **Network**, filter `cloudflareinsights`, and confirm **two** things:
+
+- `beacon.min.js` returns **200**
+- a **POST to `cloudflareinsights.com/cdn-cgi/rum`** returns **204**
+
+If the POST is missing, check the **Console** for a CSP violation. The policy in
+`public/_headers` already allows both hosts (`static.cloudflareinsights.com` in
+`script-src`, `cloudflareinsights.com` in `connect-src`) — they are different
+origins and both are required.
+
+Data takes a few minutes to appear in the dashboard.
+
 ---
 
 ## 4. Move the domain
@@ -163,9 +204,11 @@ too. Old links keep working — no redirect map needed.
 | `public/_routes.json` | Restricts the Function to `/api/*` so static requests never invoke it. |
 | `wrangler.toml` | Project name and build output directory. |
 
-The Content-Security-Policy in `_headers` allows Turnstile and nothing else
-third-party. **If you add an analytics or chat script later you must add its
-origin there**, or the browser will block it.
+The Content-Security-Policy in `_headers` allows Turnstile and Cloudflare Web
+Analytics, and nothing else third-party. **If you add any other script later you
+must add its origin there**, or the browser will block it — and note that a
+script host and the host it reports to are often different origins needing
+`script-src` and `connect-src` entries respectively.
 
 ---
 

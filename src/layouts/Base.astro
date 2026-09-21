@@ -2,7 +2,7 @@
 import '@/styles/global.css';
 import Nav from '@/components/Nav.astro';
 import TitleBlock from '@/components/TitleBlock.astro';
-import { site, contact, credentials, serviceAreas, isTodo } from '@/site.config';
+import { site, contact, credentials, serviceAreas, nav, analytics, isTodo } from '@/site.config';
 import { normalizePath } from '@/lib/paths';
 
 interface Props {
@@ -17,9 +17,22 @@ interface Props {
     section: string;
   };
   noindex?: boolean;
+  /**
+   * Extra JSON-LD nodes appended to this page's @graph. Kept as one graph
+   * rather than a second script element so page-level nodes can reference
+   * the organization by @id instead of restating it.
+   */
+  schema?: Record<string, unknown>[];
 }
 
-const { title, description, image = '/og-default.png', article, noindex } = Astro.props;
+const {
+  title,
+  description,
+  image = '/og-default.png',
+  article,
+  noindex,
+  schema: extraSchema = [],
+} = Astro.props;
 
 /**
  * `build.format: 'file'` emits `/services.html`, so the build-time pathname
@@ -33,6 +46,40 @@ const ogImage = new URL(image, Astro.site ?? site.origin);
 // Title tags read "<page> | M&Z Design Consulting" except on the homepage,
 // where the page title already carries the firm name.
 const fullTitle = title.includes(site.name) ? title : `${title} | ${site.name}`;
+
+/**
+ * Breadcrumbs, derived from `canonicalPath` rather than Astro.url.pathname —
+ * the raw pathname carries `.html` at build time (see lib/paths.ts), which
+ * would put `/services.html` in the trail and disagree with the canonical tag.
+ *
+ * Skipped on the homepage, where a one-item trail says nothing, and on noindex
+ * pages, which are not being read by a crawler anyway. Intermediate segments
+ * take their label from `nav`; the last segment is the page itself, so it uses
+ * the page title — that is what makes article slugs read as article titles.
+ */
+const segments = canonicalPath.split('/').filter(Boolean);
+
+const breadcrumbs =
+  noindex || segments.length === 0
+    ? []
+    : [
+        {
+          '@type': 'BreadcrumbList',
+          '@id': `${canonical.href}#breadcrumbs`,
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.origin}/` },
+            ...segments.map((segment, i) => ({
+              '@type': 'ListItem',
+              position: i + 2,
+              name:
+                i === segments.length - 1
+                  ? title
+                  : (nav.find((n) => n.href === `/${segment}`)?.label ?? segment),
+              item: new URL(`/${segments.slice(0, i + 1).join('/')}`, site.origin).href,
+            })),
+          ],
+        },
+      ];
 
 const organization = {
   '@type': 'ProfessionalService',
@@ -96,6 +143,7 @@ const schema: Record<string, unknown> = {
       name: site.name,
       publisher: { '@id': `${site.origin}/#organization` },
     },
+    ...breadcrumbs,
     ...(article
       ? [
           {
@@ -112,6 +160,7 @@ const schema: Record<string, unknown> = {
           },
         ]
       : []),
+    ...extraSchema,
   ],
 };
 ---
@@ -157,6 +206,24 @@ const schema: Record<string, unknown> = {
       <slot />
     </main>
     <TitleBlock />
+
+    {
+      /*
+       * Cloudflare Web Analytics. Absent entirely until a real token is set in
+       * site.config.ts, so the site never ships a beacon that measures nothing.
+       * The CSP in public/_headers must allow static.cloudflareinsights.com to
+       * load it AND cloudflareinsights.com for it to report — miss the second
+       * and it loads silently and sends nothing.
+       */
+      !isTodo(analytics.cloudflareToken) && (
+        <script
+          is:inline
+          defer
+          src="https://static.cloudflareinsights.com/beacon.min.js"
+          data-cf-beacon={JSON.stringify({ token: String(analytics.cloudflareToken) })}
+        />
+      )
+    }
   </body>
 </html>
 
