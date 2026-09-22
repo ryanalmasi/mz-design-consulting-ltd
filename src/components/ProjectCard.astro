@@ -52,6 +52,7 @@ const href = `/projects/${project.id}`;
 
 <style>
   .project-card {
+    position: relative;
     background: var(--bg-raised);
     border: var(--border);
     border-radius: var(--radius);
@@ -60,11 +61,42 @@ const href = `/projects/${project.id}`;
     transition: border-color var(--dur) var(--ease);
   }
 
-  .project-card:hover {
+  /* Registration ticks: the corner marks a drawing sheet carries for
+     alignment. Decorative, and pseudo-elements, so nothing reaches the
+     accessibility tree. */
+  .project-card::before,
+  .project-card::after {
+    content: '';
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    pointer-events: none;
+    border-color: var(--line-strong);
+    border-style: solid;
+    transition: border-color var(--dur) var(--ease);
+  }
+
+  .project-card::before {
+    top: -1px;
+    left: -1px;
+    border-width: 1px 0 0 1px;
+  }
+
+  .project-card::after {
+    right: -1px;
+    bottom: -1px;
+    border-width: 0 1px 1px 0;
+  }
+
+  .project-card:hover,
+  .project-card:focus-within {
     border-color: var(--accent);
   }
 
-  .project-card:focus-within {
+  .project-card:hover::before,
+  .project-card:hover::after,
+  .project-card:focus-within::before,
+  .project-card:focus-within::after {
     border-color: var(--accent);
   }
 
@@ -132,10 +164,40 @@ const href = `/projects/${project.id}`;
   }
 
   .pc-body {
+    position: relative;
     display: flex;
     flex-direction: column;
     flex: 1;
     padding: var(--s-5);
+  }
+
+  /* A cut-hatch wash under the card body on hover — the section-drawing
+     equivalent of a highlight. No lift, no drop shadow. */
+  .pc-body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--hatch-cut-ink) 0 1px,
+      transparent 1px var(--hatch-gap)
+    );
+    transition: opacity var(--dur) var(--ease);
+  }
+
+  .project-card:hover .pc-body::before,
+  .project-card:focus-within .pc-body::before {
+    opacity: 1;
+  }
+
+  /* Lifts the text above the wash. Without this the hatch paints over the
+     summary and the metrics. */
+  .pc-body > * {
+    position: relative;
+    z-index: 1;
   }
 
   .pc-discipline {

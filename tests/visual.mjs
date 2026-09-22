@@ -166,6 +166,37 @@ try {
 
     await ctx.close();
   }
+
+  // ---- Component detailing (spec §8) --------------------------------------
+  section('component detailing');
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto(`${base}/index.html`, { waitUntil: 'load' });
+
+    // The stats strip is re-cut as a ruled drawing schedule but stays a <dl>.
+    const proofTag = await page.$eval('.proof-grid', (el) => el.tagName.toLowerCase());
+    ok(proofTag === 'dl', 'the stats strip is still a definition list', `<${proofTag}>`);
+
+    const tick = await page.$eval('.proof-item', (el) => getComputedStyle(el, '::before').content);
+    ok(tick !== 'none', 'each schedule cell carries a tick mark', `content: ${tick}`);
+
+    const tabular = await page.$eval('.proof-item dd', (el) => getComputedStyle(el).fontVariantNumeric);
+    ok(tabular.includes('tabular-nums'), 'schedule values are tabular', tabular);
+
+    // Registration ticks on cards.
+    await page.goto(`${base}/projects.html`, { waitUntil: 'load' });
+    const marks = await page.$eval('.project-card', (el) => getComputedStyle(el, '::before').borderTopWidth);
+    ok(marks !== '0px', 'project cards carry registration ticks', `border-top-width ${marks}`);
+
+    // And no numbered index was reintroduced.
+    const numbered = await page.$$eval('.project-card', (els) =>
+      els.filter((el) => /^\s*0\d\s*$/.test(el.querySelector('.pc-index')?.textContent ?? '')).length
+    );
+    ok(numbered === 0, 'no 01/02/03 index on project cards — a grid is a set, not a sequence', `${numbered} found`);
+
+    await ctx.close();
+  }
 } finally {
   await browser.close();
   stop();
