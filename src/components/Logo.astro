@@ -56,6 +56,12 @@ const { markOnly = false, class: className } = Astro.props;
     align-items: center;
     gap: var(--s-3);
     color: currentColor;
+    /* Scales the mark and the wordmark together. --logo-scale is set by
+       Nav.astro's condense keyframe; the fallback keeps the component usable
+       anywhere else. */
+    transform: scale(var(--logo-scale, 1));
+    transform-origin: left center;
+    transition: transform var(--dur) var(--ease);
   }
 
   .logo-mark {

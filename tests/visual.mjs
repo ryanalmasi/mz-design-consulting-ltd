@@ -98,6 +98,74 @@ try {
 
     await ctx.close();
   }
+
+  // ---- Nav condensed state (spec §7, §13.1) -------------------------------
+  section('nav condense');
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto(`${base}/services.html`, { waitUntil: 'load' });
+
+    const navHTop = await page.$eval('.nav-inner', (el) => el.getBoundingClientRect().height);
+
+    await page.evaluate(() => window.scrollTo(0, 800));
+    await page.waitForTimeout(400);
+    const navHScrolled = await page.$eval('.nav-inner', (el) => el.getBoundingClientRect().height);
+
+    ok(
+      Math.abs(navHTop - navHScrolled) < 0.5,
+      'the bar height does not change on scroll',
+      `${navHTop}px at top, ${navHScrolled}px scrolled — --nav-h is load-bearing for six scroll-offset rules`
+    );
+
+    const token = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--nav-h').trim()
+    );
+    ok(token === '68px', '--nav-h is unchanged', token);
+
+    // The condense itself: the logo scales down.
+    //
+    // NOTE ON DEVIATION FROM THE BRIEF: the brief's scrollTo(0, 0) here used the
+    // two-argument form and read getComputedStyle in the same tick, with no
+    // wait. Two real timing effects make that combination read a stale value
+    // no matter what the implementation is:
+    //  1. Two-arg scrollTo() respects `html { scroll-behavior: smooth }`
+    //     (global.css:27, pre-existing, unrelated to this task), so the scroll
+    //     position itself hadn't reached 0 yet (measured: scrollY was still
+    //     718 of 800 immediately after the call, and only 56 after a 400ms
+    //     wait) — `behavior: 'instant'` fixes that part.
+    //  2. Even with an instant scroll, `window.scrollY` updates synchronously
+    //     but the scroll-timeline-driven custom property does not — it only
+    //     recomputes on the next rendering frame (measured directly: reading
+    //     --logo-scale in the same tick after an instant scrollTo(0,0) still
+    //     showed the stale 0.86; after a rAF or a short wait it correctly
+    //     showed 1). So a wait is needed after the reset scroll too, exactly
+    //     as already used below for scaleScrolled.
+    await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' }));
+    await page.waitForTimeout(400);
+    const scaleTop = await page.evaluate(() =>
+      getComputedStyle(document.querySelector('.site-nav')).getPropertyValue('--logo-scale').trim()
+    );
+    await page.evaluate(() => window.scrollTo({ top: 800, left: 0, behavior: 'instant' }));
+    await page.waitForTimeout(400);
+    const scaleScrolled = await page.evaluate(() =>
+      getComputedStyle(document.querySelector('.site-nav')).getPropertyValue('--logo-scale').trim()
+    );
+    ok(
+      scaleTop !== scaleScrolled,
+      'the logo scale changes on scroll',
+      `--logo-scale ${scaleTop || '(unset)'} → ${scaleScrolled || '(unset)'}`
+    );
+
+    // And the anchor still lands clear of the bar.
+    await page.goto(`${base}/services.html#stormwater`, { waitUntil: 'load' });
+    await page.waitForTimeout(600);
+    const anchorTop = await page.$eval('#stormwater', (el) => el.getBoundingClientRect().top);
+    const barBottom = await page.$eval('.site-nav', (el) => el.getBoundingClientRect().bottom);
+    ok(anchorTop >= barBottom - 1, 'a deep-linked anchor lands below the nav bar', `anchor at ${Math.round(anchorTop)}, bar ends at ${Math.round(barBottom)}`);
+
+    await ctx.close();
+  }
 } finally {
   await browser.close();
   stop();

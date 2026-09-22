@@ -76,6 +76,18 @@ const phoneReady = !isTodo(contact.phone);
 </header>
 
 <style>
+  @property --logo-scale {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 1;
+  }
+
+  @property --nav-pad {
+    syntax: '<length>';
+    inherits: true;
+    initial-value: 0.75rem;
+  }
+
   .site-nav {
     position: sticky;
     top: 0;
@@ -95,7 +107,24 @@ const phoneReady = !isTodo(contact.phone);
     max-width: var(--container);
     margin-inline: auto;
     padding-inline: var(--gutter);
+    /*
+     * FIXED. --nav-h is read by six rules outside this component:
+     *   global.css:29                  scroll-padding-top
+     *   services.astro:206             scroll-margin-top
+     *   services.astro:216             sticky discipline heading
+     *   insights/[...slug].astro:244   scroll-margin-top
+     *   insights/[...slug].astro:251   scroll-margin-top
+     * Animating this height desynchronises every one of them from the real
+     * bar and in-page anchors land underneath it. The condense below is
+     * padding and logo scale only, which costs nothing and keeps the anchor
+     * maths true.
+     */
     height: var(--nav-h);
+  }
+
+  .site-nav {
+    --logo-scale: 1;
+    --nav-pad: var(--s-3);
   }
 
   .nav-brand {
@@ -104,7 +133,41 @@ const phoneReady = !isTodo(contact.phone);
     flex-shrink: 0;
     text-decoration: none;
     /* Extends the tap area to the full nav height without moving the mark. */
-    padding-block: var(--s-3);
+    padding-block: var(--nav-pad);
+    transition: padding-block var(--dur) var(--ease);
+  }
+
+  @supports (animation-timeline: scroll()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .site-nav {
+        /*
+         * The --nav-timeline indirection is deliberate, not decorative. The
+         * production build's CSS minifier folds a bare
+         * `animation-timeline: scroll(root block);` declaration into the
+         * `animation` shorthand (producing `animation: … scroll(root)`),
+         * which this repo's pinned test Chromium does not support in
+         * shorthand form even though it supports the longhand — the
+         * animation silently never runs (animation-name computes to `none`).
+         * Routing the value through a custom property defeats that
+         * shorthand-folding, since the minifier can't inspect a var().
+         * Verified directly against dist/ output: without this line the
+         * built CSS reads `animation:linear both nav-condense scroll(root)`
+         * and CSS.supports() rejects it; with it, animation-timeline stays
+         * its own longhand and the condense runs.
+         */
+        --nav-timeline: scroll(root block);
+        animation: nav-condense linear both;
+        animation-timeline: var(--nav-timeline);
+        animation-range: 0 160px;
+      }
+    }
+  }
+
+  @keyframes nav-condense {
+    to {
+      --logo-scale: 0.86;
+      --nav-pad: var(--s-2);
+    }
   }
 
   .nav-links {
