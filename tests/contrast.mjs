@@ -22,6 +22,22 @@ const PAIRS = [
   { name: 'button label on accent', fg: 'var(--on-accent)', bg: 'var(--accent)', min: 4.5 },
   { name: 'orange-on-dark link on ink band', fg: 'var(--cut-light)', bg: 'var(--bg-invert)', min: 4.5 },
   { name: 'hairline against page ground', fg: 'var(--line-strong)', bg: 'var(--bg)', min: 1.2 },
+  // The grid wash at its DARKEST point: two 50%-alpha grid lines crossing over
+  // the inset band. Averaging the wash would understate this by design.
+  {
+    name: 'body text over the grid wash (two crossing lines)',
+    fg: 'var(--text)',
+    bg: 'var(--bg-inset)',
+    layers: ['var(--grid-line)', 'var(--grid-line)'],
+    min: 4.5,
+  },
+  {
+    name: 'muted text over the grid wash (two crossing lines)',
+    fg: 'var(--text-muted)',
+    bg: 'var(--bg-inset)',
+    layers: ['var(--grid-line)', 'var(--grid-line)'],
+    min: 4.5,
+  },
 ];
 
 const { base, stop } = await startPreview();

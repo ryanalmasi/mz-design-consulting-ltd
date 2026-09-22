@@ -114,6 +114,16 @@
   --border: 1px solid var(--line);
   --border-strong: 1px solid var(--line-strong);
 
+  /* ---- Depth layer ------------------------------------------------- */
+  /* Drawing devices: a drafting grid, section hatching, registration ticks.
+     All decorative, all built from the existing linework colours rather than
+     new hues, so the depth reads as more drawing rather than more interface. */
+  --grid-size: 32px;
+  --grid-line: color-mix(in srgb, var(--line) 50%, transparent);
+  --hatch-gap: 7px;
+  --hatch-cut-ink: color-mix(in srgb, var(--cut) 18%, transparent);
+  --hatch-fill-ink: color-mix(in srgb, var(--fill) 18%, transparent);
+
   --nav-h: 68px;
 
   /* ---- Motion ------------------------------------------------------ */
@@ -154,6 +164,8 @@
     --line: #2b3235;
     --line-strong: #3d464a;
     --line-invert: #414b50;
+    --hatch-cut-ink: color-mix(in srgb, var(--cut-light) 16%, transparent);
+    --hatch-fill-ink: color-mix(in srgb, var(--fill-light) 16%, transparent);
 
     --focus: var(--focus-invert);
   }
@@ -178,6 +190,8 @@
   --line: #2b3235;
   --line-strong: #3d464a;
   --line-invert: #414b50;
+  --hatch-cut-ink: color-mix(in srgb, var(--cut-light) 16%, transparent);
+  --hatch-fill-ink: color-mix(in srgb, var(--fill-light) 16%, transparent);
 
   --focus: var(--focus-invert);
 }

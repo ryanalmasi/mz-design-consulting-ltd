@@ -42,6 +42,44 @@ try {
     ok(px(body) >= 16, 'body type floor is untouched', `${body}`);
     await narrow.close();
   }
+
+  // ---- Drawing devices (spec §5) ------------------------------------------
+  section('drawing devices');
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto(`${base}/index.html`, { waitUntil: 'load' });
+
+    const tokens = await page.evaluate(() => {
+      const cs = getComputedStyle(document.documentElement);
+      return {
+        gridSize: cs.getPropertyValue('--grid-size').trim(),
+        hatchGap: cs.getPropertyValue('--hatch-gap').trim(),
+        gridLine: cs.getPropertyValue('--grid-line').trim(),
+      };
+    });
+    ok(tokens.gridSize === '32px', '--grid-size defined', tokens.gridSize || '(unset)');
+    ok(tokens.hatchGap === '7px', '--hatch-gap defined', tokens.hatchGap || '(unset)');
+    ok(tokens.gridLine.length > 0, '--grid-line defined', '(unset)');
+
+    // Every device instance must be out of the accessibility tree: either a
+    // pseudo-element (nothing in the DOM) or explicitly aria-hidden.
+    const leaked = await page.$$eval(
+      '.sheet-grid, .hatch-cut, .hatch-fill, .reg-marks, .chainage, .match-line',
+      (els) =>
+        els
+          .filter((el) => {
+            // A device carrying real content is fine; a device that IS the
+            // content must be hidden from assistive technology.
+            const decorativeOnly = el.dataset.decorative === 'true';
+            return decorativeOnly && el.getAttribute('aria-hidden') !== 'true';
+          })
+          .map((el) => `${el.tagName.toLowerCase()}.${el.className}`)
+    );
+    ok(leaked.length === 0, 'purely decorative devices are aria-hidden', leaked.join(', '));
+
+    await ctx.close();
+  }
 } finally {
   await browser.close();
   stop();

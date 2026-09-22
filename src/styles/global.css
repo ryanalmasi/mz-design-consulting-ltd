@@ -254,6 +254,138 @@ a:hover {
   margin: 0;
 }
 
+/*
+ * Depth layer. Everything below is decorative: it is either a pseudo-element,
+ * or an element the page marks aria-hidden. None of it carries meaning and
+ * none of it may be the only way something is communicated.
+ */
+
+/* A drafting grid, laid behind content as a wash. Sized so it reads as ruling
+   at arm's length and disappears at reading distance. */
+.sheet-grid {
+  position: relative;
+  isolation: isolate;
+}
+
+.sheet-grid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      var(--grid-line) 0 1px,
+      transparent 1px var(--grid-size)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      var(--grid-line) 0 1px,
+      transparent 1px var(--grid-size)
+    );
+  /* Fades out before the band edge so the grid reads as a drawing area rather
+     than as a table. */
+  mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent);
+}
+
+/* 45° section hatching, in the two directions a real section uses: cut leans
+   one way, fill the other. */
+.hatch-cut,
+.hatch-fill {
+  background-repeat: repeat;
+}
+
+.hatch-cut {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--hatch-cut-ink) 0 1px,
+    transparent 1px var(--hatch-gap)
+  );
+}
+
+.hatch-fill {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--hatch-fill-ink) 0 1px,
+    transparent 1px var(--hatch-gap)
+  );
+}
+
+/* Registration marks: the L-shaped corner ticks a drawing sheet carries for
+   alignment. Two pseudo-elements, four corners, via corner-anchored gradients. */
+.reg-marks {
+  position: relative;
+}
+
+.reg-marks::before,
+.reg-marks::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  border-color: var(--line-strong);
+  border-style: solid;
+  transition: border-color var(--dur) var(--ease);
+}
+
+.reg-marks::before {
+  top: -1px;
+  left: -1px;
+  border-width: 1px 0 0 1px;
+}
+
+.reg-marks::after {
+  right: -1px;
+  bottom: -1px;
+  border-width: 0 1px 1px 0;
+}
+
+/*
+ * A chainage rule: tick geometry only.
+ *
+ * The obvious version of this device prints station values (0+000, 0+100)
+ * along the rule. It must not. Monospace here is reserved for real measured
+ * values, and invented chainages on a marketing page are decorative labels
+ * wearing the costume of survey data — a bad look specifically for an
+ * engineering firm. If a real measured value is ever available for a given
+ * rule, it may carry that.
+ */
+.chainage {
+  height: 12px;
+  border: 0;
+  margin: 0;
+  background-image:
+    linear-gradient(to bottom, var(--line-strong) 0 1px, transparent 1px),
+    repeating-linear-gradient(
+      to right,
+      var(--line-strong) 0 1px,
+      transparent 1px var(--grid-size)
+    );
+  background-size: 100% 1px, 100% 6px;
+  background-position: 0 0, 0 0;
+  background-repeat: no-repeat, repeat-x;
+}
+
+/* A match line: where one drawing sheet continues onto the next. */
+.match-line {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  border: 0;
+  margin: 0;
+  color: var(--muted-ink, var(--text-muted));
+}
+
+.match-line::before,
+.match-line::after {
+  content: '';
+  flex: 1;
+  height: 0;
+  border-top: 1px dashed var(--line-strong);
+}
+
 /* Monospace is reserved for real measured values — elevations, chainages,
    volumes, quantities — where tabular figures actually matter. It is never
    used for decorative labels. */
