@@ -144,7 +144,7 @@ const serviceSchema = disciplines.map((d) => ({
 
   <section class="section">
     <div class="container">
-      <ul class="disciplines">
+      <ul class="disciplines reveal">
         {
           disciplines.map((d) => (
             <li class="discipline" id={d.id}>
@@ -171,7 +171,7 @@ const serviceSchema = disciplines.map((d) => ({
     <div class="container">
       <h2>How a project runs</h2>
       <hr class="rule process-rule" />
-      <ol class="process">
+      <ol class="process reveal">
         {
           process.map((step, i) => (
             <li class="step">

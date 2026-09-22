@@ -48,7 +48,7 @@ const categories = PROJECT_CATEGORIES.filter((c) =>
         Showing all {projects.length} projects
       </p>
 
-      <div class="card-grid" id="project-grid">
+      <div class="card-grid reveal" id="project-grid">
         {projects.map((p, i) => <ProjectCard project={p} priority={i < 2} />)}
       </div>
     </div>

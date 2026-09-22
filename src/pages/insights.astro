@@ -80,7 +80,7 @@ const faqSchema = {
 
       {
         rest.length > 0 && (
-          <div class="card-grid">
+          <div class="card-grid reveal">
             {rest.map((a) => (
               <ArticleCard article={a} headingLevel={2} />
             ))}
@@ -97,7 +97,7 @@ const faqSchema = {
         The questions developers, contractors and project managers ask most often.
       </p>
 
-      <div class="faq-list">
+      <div class="faq-list reveal">
         {
           faqs.map((f) => (
             <details class="faq">

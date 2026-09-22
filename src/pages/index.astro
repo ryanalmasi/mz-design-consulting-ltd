@@ -116,13 +116,13 @@ const services = [
   <!-- ============ SERVICES ============ -->
   <section class="section" id="services">
     <div class="container">
-      <div class="head">
+      <div class="head reveal">
         <h2>What we do</h2>
         <a href="/services" class="link">All services</a>
       </div>
       <hr class="rule" />
 
-      <ul class="svc-grid">
+      <ul class="svc-grid reveal">
         {
           services.map((s) => (
             <li class="svc">
@@ -138,7 +138,7 @@ const services = [
   <!-- ============ POSITION ============ -->
   <section class="section band-inset sheet-grid">
     <div class="container position">
-      <div class="position-text">
+      <div class="position-text reveal">
         <h2>Designs that survive contact with the site</h2>
         <div class="stack prose-measure">
           <p>
@@ -177,13 +177,13 @@ const services = [
       <p class="match-line data-sm" data-decorative="true" aria-hidden="true">
         <span>SELECTED WORK</span>
       </p>
-      <div class="head">
+      <div class="head reveal">
         <h2>Selected projects</h2>
         <a href="/projects" class="link">All projects</a>
       </div>
       <hr class="rule" />
 
-      <div class="card-grid">
+      <div class="card-grid reveal">
         {projects.map((p, i) => <ProjectCard project={p} priority={i === 0} />)}
       </div>
     </div>
@@ -192,13 +192,13 @@ const services = [
   <!-- ============ INSIGHTS ============ -->
   <section class="section band-inset sheet-grid">
     <div class="container">
-      <div class="head">
+      <div class="head reveal">
         <h2>Engineering notes</h2>
         <a href="/insights" class="link">All articles</a>
       </div>
       <hr class="rule" />
 
-      <div class="card-grid">
+      <div class="card-grid reveal">
         {articles.map((a) => <ArticleCard article={a} />)}
       </div>
     </div>
