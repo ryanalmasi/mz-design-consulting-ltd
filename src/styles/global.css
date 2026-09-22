@@ -92,14 +92,22 @@ h4 {
   color: var(--text);
 }
 
+/*
+ * The clamp() MINIMUM does not move on either of these. Only the ceiling
+ * grows: the editorial effect is wanted on desktop, where there is room for
+ * it, and raising the floor is the most reliable way to reintroduce
+ * horizontal overflow at 390px.
+ */
 h1 {
-  font-size: clamp(2.5rem, 6.5vw, 4.25rem);
-  letter-spacing: -0.035em;
+  font-size: clamp(2.5rem, 7.5vw, var(--t-5xl));
+  font-weight: var(--wt-display);
+  letter-spacing: -0.04em;
 }
 
 h2 {
-  font-size: clamp(1.875rem, 4vw, var(--t-3xl));
-  letter-spacing: -0.03em;
+  font-size: clamp(1.875rem, 4.5vw, 3.5rem);
+  font-weight: var(--wt-display);
+  letter-spacing: -0.032em;
 }
 
 h3 {

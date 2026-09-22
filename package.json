@@ -17,7 +17,8 @@
     "test:contrast": "node tests/contrast.mjs",
     "test:interaction": "node tests/interaction.mjs",
     "test:motion": "node tests/motion.mjs",
-    "test": "npm run build && npm run test:axe && npm run test:layout && npm run test:contrast && npm run test:interaction && npm run test:motion"
+    "test:visual": "node tests/visual.mjs",
+    "test": "npm run build && npm run test:axe && npm run test:layout && npm run test:contrast && npm run test:interaction && npm run test:motion && npm run test:visual"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

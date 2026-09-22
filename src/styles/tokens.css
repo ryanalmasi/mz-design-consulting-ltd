@@ -72,6 +72,14 @@
   --t-xl: 1.75rem;     /* 28px */
   --t-2xl: 2.25rem;    /* 36px */
   --t-3xl: 3rem;       /* 48px */
+  --t-4xl: 3.75rem;    /* 60px */
+  --t-5xl: 4.75rem;    /* 76px */
+
+  /* Archivo is loaded as a variable font. The site used one weight (700) for
+     every heading; opening the axis at the top of the scale is what makes the
+     display sizes read as display type rather than as large body headings. */
+  --wt-display: 800;   /* h1, h2 */
+  --wt-heading: 700;   /* h3, h4 — unchanged */
 
   --lh-tight: 1.05;
   --lh-snug: 1.25;
