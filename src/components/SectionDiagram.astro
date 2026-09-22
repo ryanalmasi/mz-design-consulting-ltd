@@ -70,6 +70,9 @@ const stations = [
       <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
         <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.12" />
       </pattern>
+      <clipPath id="ground-sweep" clipPathUnits="userSpaceOnUse">
+        <rect class="sweep-rect" x="0" y="0" width="1200" height="400" />
+      </clipPath>
     </defs>
 
     <rect width="1200" height="400" fill="url(#grid)" />
@@ -84,25 +87,28 @@ const stations = [
       <path d={cut} fill="url(#hatch-cut)" fill-opacity="0.65" />
     </g>
 
-    <!-- Existing ground: the surveyed surface -->
-    <path
-      d={groundPath}
-      fill="none"
-      stroke="currentColor"
-      stroke-opacity="0.55"
-      stroke-width="2.5"
-      stroke-linejoin="round"
-      stroke-dasharray="10 6"
-    />
+    <g class="ground" clip-path="url(#ground-sweep)">
+      <!-- Existing ground: the surveyed surface -->
+      <path
+        d={groundPath}
+        fill="none"
+        stroke="currentColor"
+        stroke-opacity="0.55"
+        stroke-width="2.5"
+        stroke-linejoin="round"
+        stroke-dasharray="10 6"
+      />
 
-    <!-- Survey shots -->
-    <g fill="currentColor" fill-opacity="0.4">
-      {ground.map(([x, y]) => <circle cx={x} cy={y} r="3" />)}
+      <!-- Survey shots -->
+      <g fill="currentColor" fill-opacity="0.4">
+        {ground.map(([x, y]) => <circle cx={x} cy={y} r="3" />)}
+      </g>
     </g>
 
     <!-- Proposed grade: the designed line, drawn heaviest because it is the deliverable -->
     <line
       class="grade-line"
+      pathLength="1"
       x1={gradeLeft[0]}
       y1={gradeLeft[1]}
       x2={gradeRight[0]}
@@ -192,20 +198,42 @@ const stations = [
   }
 
   /*
-   * The one orchestrated moment on the page: the design line draws itself
-   * through the existing ground, then the hatching resolves. It happens once,
-   * on load, and nothing else on the site animates on scroll.
+   * The one orchestrated moment on the page: the ground sweeps in, the design
+   * line draws itself through it, then the hatching resolves. It happens once,
+   * on load.
+   *
+   * The grade line uses pathLength="1", so the dash values are normalised and
+   * no path measurement is needed — the previous version hard-coded the
+   * path's pixel length, which had to be re-derived by hand whenever the
+   * line moved.
+   *
+   * The ground polyline is revealed by a clip sweep rather than by a dash
+   * offset, because stroke-dasharray is already carrying its dashed
+   * appearance; using it for both makes the dashes crawl.
    */
   @media (prefers-reduced-motion: no-preference) {
+    .sweep-rect {
+      transform-box: fill-box;
+      transform-origin: left center;
+      transform: scaleX(0);
+      animation: sweep-in 700ms var(--ease) both;
+    }
+
     .grade-line {
-      stroke-dasharray: 1085;
-      stroke-dashoffset: 1085;
-      animation: draw-grade 900ms var(--ease) 150ms forwards;
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+      animation: draw-grade 900ms var(--ease) 400ms forwards;
     }
 
     .regions {
       opacity: 0;
-      animation: resolve 600ms var(--ease) 850ms forwards;
+      animation: resolve 600ms var(--ease) 1150ms forwards;
+    }
+  }
+
+  @keyframes sweep-in {
+    to {
+      transform: scaleX(1);
     }
   }
 
