@@ -124,6 +124,10 @@
   --hatch-cut-ink: color-mix(in srgb, var(--cut) 18%, transparent);
   --hatch-fill-ink: color-mix(in srgb, var(--fill) 18%, transparent);
 
+  /* Unifies seven mismatched stock photographs into one system. Pulls toward
+     the existing blue-grey linework colour rather than introducing a new hue. */
+  --duotone-wash: color-mix(in srgb, var(--datum) 55%, transparent);
+
   --nav-h: 68px;
 
   /* ---- Motion ------------------------------------------------------ */
@@ -167,6 +171,10 @@
     --hatch-cut-ink: color-mix(in srgb, var(--cut-light) 16%, transparent);
     --hatch-fill-ink: color-mix(in srgb, var(--fill-light) 16%, transparent);
 
+    /* Weaker on a dark ground: the images already sit dark, and the light-mode
+       strength reads as mud. */
+    --duotone-wash: color-mix(in srgb, var(--datum) 40%, transparent);
+
     --focus: var(--focus-invert);
   }
 }
@@ -192,6 +200,10 @@
   --line-invert: #414b50;
   --hatch-cut-ink: color-mix(in srgb, var(--cut-light) 16%, transparent);
   --hatch-fill-ink: color-mix(in srgb, var(--fill-light) 16%, transparent);
+
+  /* Weaker on a dark ground: the images already sit dark, and the light-mode
+     strength reads as mud. */
+  --duotone-wash: color-mix(in srgb, var(--datum) 40%, transparent);
 
   --focus: var(--focus-invert);
 }

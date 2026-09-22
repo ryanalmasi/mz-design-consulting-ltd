@@ -110,6 +110,43 @@ try {
 
     await ctx.close();
   }
+
+  // ---- Duotone keyboard parity (spec §6, check 7) -------------------------
+  section('duotone');
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto(`${base}/projects.html`, { waitUntil: 'load' });
+
+    const img = page.locator('.project-card .pc-img').first();
+    const resting = await img.evaluate((el) => getComputedStyle(el).filter);
+    ok(resting !== 'none', 'card imagery is duotoned at rest', `filter: ${resting}`);
+
+    // Keyboard users must get the same reveal as pointer users. Tab until the
+    // first card's link has focus, then re-read the filter.
+    await page.locator('.project-card .pc-link').first().focus();
+    await page.waitForTimeout(600); // --dur-slow is 420ms
+    const focused = await img.evaluate((el) => getComputedStyle(el).filter);
+    ok(focused === 'none', 'focus-within returns the image to full colour', `filter: ${focused}`);
+
+    // And the tint layer must come off too, not just the greyscale.
+    const tintOpacity = await page
+      .locator('.project-card')
+      .first()
+      .evaluate((el) => getComputedStyle(el.querySelector('.pc-media'), '::after').opacity);
+    ok(Number(tintOpacity) < 0.01, 'the tint layer clears on focus', `opacity ${tintOpacity}`);
+
+    // §13.3: the category chip is opaque, so the duotone underneath cannot
+    // affect its contrast. Assert that it STAYS opaque rather than measuring
+    // it over imagery.
+    const chipAlpha = await page
+      .locator('.pc-category')
+      .first()
+      .evaluate((el) => getComputedStyle(el).backgroundColor);
+    ok(!chipAlpha.startsWith('rgba') || chipAlpha.endsWith(', 1)'), 'the category chip is still opaque', chipAlpha);
+
+    await ctx.close();
+  }
 } finally {
   await browser.close();
   stop();
