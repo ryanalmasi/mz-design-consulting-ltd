@@ -1,7 +1,10 @@
 # UI stylization — enriching the drawing-sheet language
 
 **Date:** 2026-09-21
-**Status:** approved design, not yet implemented
+**Status:** approved design, not yet implemented.
+**→ Read [§13](#13-open-decisions--answer-before-starting) first.** Three
+decisions need answers before any code is written; one of them (the nav) has
+ripple beyond this spec.
 **Scope:** visual treatment only. No content, routing, schema or form changes.
 
 ---
@@ -263,3 +266,76 @@ rejected, and why the references were not copied literally.
 | Grid wash erodes text contrast on inset bands | Check 3 measures against the darkest point of the wash |
 | Scroll-driven animation support is uneven | Default state is visible; `@supports` guard; check 5 |
 | Decorative devices leak into the accessibility tree | All are pseudo-elements or `aria-hidden`; check 2 |
+
+---
+
+## 13. Open decisions — answer before starting
+
+*Added 2026-09-21 after a review pass. The design above is unchanged; these are
+gaps found by checking the spec against the code, not disagreements with it.*
+
+### 13.1 What does the nav "condensed state" actually condense? — **blocking**
+
+§7 specifies the mechanism (`animation-timeline: scroll()`, no JS) but never the
+effect. This matters more than it looks, because `--nav-h` is load-bearing in six
+places outside `Nav.astro`:
+
+```
+src/styles/global.css:29                     scroll-padding-top
+src/components/Nav.astro:98                  the bar's own height
+src/pages/services.astro:206                 scroll-margin-top
+src/pages/services.astro:216                 sticky discipline-heading offset
+src/pages/insights/[...slug].astro:244,251   scroll-margin-top
+```
+
+**Animating the height desynchronises every one of those from the real bar**, so
+in-page anchors (`/services#grading`, article headings from the contents list)
+land underneath it. That is a regression in navigation, traded for a visual
+flourish.
+
+**Recommended:** condense *padding and logo scale only*, leaving `--nav-h` fixed.
+Reads as a condense, costs nothing, and the anchor maths stays true.
+
+**If height must animate:** every rule above has to move to a second token that
+tracks the animated value, and in-page anchor landing positions become a
+verification item in §10. Do not discover this mid-implementation.
+
+### 13.2 Does `tests/` ship in this pass or its own? — **scope**
+
+§10 has this work create `tests/`. That is the right thing to build and it
+unblocks backlog item 9 (CI), but it is a different kind of change from a visual
+pass and roughly doubles the size of the task.
+
+Either is defensible. Decide up front:
+
+- **One pass** — the visual work lands already covered by the harness that proves
+  it. Bigger diff, harder review.
+- **Two passes** — build `tests/` first against the *current* UI, establishing a
+  green baseline, then do the visual work against it. Slower, but a regression
+  then shows up as a test that flipped rather than a number someone has to
+  remember. **This is the safer order** and it is how the baseline in §3 was
+  meant to work.
+
+### 13.3 Drop one unnecessary check
+
+§10 check 3 asks to re-measure `.pc-category` contrast "over the *lightest*
+region of each of the seven photographs." `.pc-category` is opaque
+(`background: var(--ink)` in `ProjectCard.astro`), so the image beneath cannot
+affect its contrast — it is white on `#15181b` regardless of the duotone.
+
+Keep the rest of check 3 (body text over `.sheet-grid` is a real risk). Drop the
+`.pc-category` clause, or restate it as "confirm it is still opaque."
+
+### 13.4 Two smaller notes, not blocking
+
+- **The hero draw-in is a rewrite, not an addition.** `SectionDiagram.astro`
+  already animates `.grade-line` with a hard-coded `stroke-dasharray: 1085`
+  (lines 201–214). Moving to normalised `pathLength="1"` replaces that working
+  code. Fine — just not purely additive, and the existing animation must not be
+  left running alongside the new one.
+- **§10 check 5 has a blind spot.** It covers `animation-timeline` being
+  *unsupported*, which is the failure mode that hides content permanently. It
+  does not cover the other common misfire: an element **already in the viewport
+  on load**, where a `view()` timeline can settle at the wrong end of its range.
+  Add that case — reload deep-linked and mid-page, confirm nothing is stuck
+  hidden.

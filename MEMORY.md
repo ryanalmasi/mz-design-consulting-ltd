@@ -374,3 +374,119 @@ Not committed — the user had not asked at the time of writing.
   first file there for backlog item 9 (CI). Not added unasked.
 - Items 2 and 4 of the backlog remain `TODO`, as do the 11 original launch
   placeholders. Nothing pushed; branch `revamp` is still local.
+
+---
+
+## Session 3 — 2026-09-21 — UI stylization spec, and a review of it
+
+Two pieces of work sit under this heading. The spec was written first, in a
+session that did not log itself; the review is this session. Both are recorded
+together so the trail is continuous.
+
+### Part A — the spec (commit `55f8baa`, unlogged at the time)
+
+A session on 2026-09-21 wrote
+`docs/superpowers/specs/2026-09-21-ui-stylization-design.md` (265 lines) and
+committed it without appending a `MEMORY.md` entry. The spec defers its own log
+entry to §11 as an *implementation* deliverable, which is why it was skipped —
+but `CLAUDE.md` asks every session to log, so this is that entry. Nothing was
+lost: the spec carries its own reasoning.
+
+**What it proposes.** A visual pass that enriches the existing drawing-sheet
+language rather than replacing it. Palette, type families and surface rules stay
+exactly as they are. What changes: display type scale (ceiling only), a depth
+layer built from drawing devices (grid wash, hatch, registration ticks, chainage
+ticks, match lines), a graphite duotone that makes the seven mismatched stock
+photos read as one system, and CSS-only motion.
+
+**Direction chosen, and the two rejected.** The user was given three options and
+picked *enrich the existing language*. Rejected: *big-firm structure with M&Z
+identity* (depends on photography that does not exist), and *full corporate AEC
+reskin* (would override the Session 1 design decisions).
+
+**Why PCL and Stantec were not copied literally** — worth keeping, because it
+will come up again. A fetch of `stantec.com` showed a full-width 2800×1640 hero
+photograph with minimal chrome; `pcl.com` returned no usable visual signal.
+What makes those sites look expensive is **photography of real projects at
+scale**. M&Z has seven stock images, one of them 289×175. A photo-led structure
+without the photographs is worse than what is there now — a large empty hero
+holding a soft stock image reads as an abandoned template. Hence imagery stays
+supporting, and the duotone does the unifying work.
+
+### Part B — review of the spec (this session)
+
+User asked what the most recent change was, then whether the spec was ready to
+implement or whether another plan existed.
+
+**There is no other plan.** `docs/superpowers/specs/` holds that one file, and
+there is no accompanying task breakdown — the spec is a design document, not an
+implementation plan.
+
+**The spec is strong and essentially ready.** Every token it references
+(`--fill`, `--datum`, `--cut`, `--dur-slow`, `--line`) was confirmed to exist in
+`tokens.css`. It makes three judgement calls that align with earlier decisions
+and should not be "simplified" by a later session: `.chainage` carries no
+numerals (invented station values would be decorative labels in survey costume);
+no `01/02/03` on project cards (a grid is a set, not a sequence — those markers
+were stripped in Session 1); and the `clamp()` floor does not move, only the
+ceiling, which is what keeps 390px safe.
+
+**Three gaps were found and written into the spec as a new §13**, so the next
+implementer meets them in the document they will actually open rather than here:
+
+1. **Blocking — "nav condensed state" is unspecified.** §7 gives the mechanism
+   but not the effect. `--nav-h` is load-bearing in **six** places outside
+   `Nav.astro` (`global.css:29`, `Nav.astro:98`, `services.astro:206,216`,
+   `insights/[...slug].astro:244,251`). Animating the bar's height
+   desynchronises every `scroll-margin-top` and `scroll-padding-top` from the
+   real bar, so in-page anchors land underneath it. Recommended resolution:
+   condense padding and logo scale only, leave `--nav-h` fixed.
+2. **Scope — does `tests/` ship in this pass or its own?** §10 bundles creating
+   the test harness into a visual pass, roughly doubling it. Recommended: build
+   `tests/` first against the *current* UI to establish a green baseline, then
+   do the visual work against it, so a regression shows up as a test flipping
+   rather than a remembered number.
+3. **One unnecessary check.** §10 check 3 asks to re-measure `.pc-category`
+   contrast over the duotoned imagery. That chip is opaque
+   (`background: var(--ink)`), so the image beneath cannot affect it.
+
+Plus two non-blocking notes now in §13.4: the hero draw-in is a **rewrite** of
+the existing `stroke-dasharray: 1085` animation rather than an addition, and
+check 5 covers `animation-timeline` being unsupported but not the other common
+misfire — an element already in the viewport on load settling at the wrong end
+of its range.
+
+### Changed
+
+- `docs/superpowers/specs/2026-09-21-ui-stylization-design.md` — status line now
+  points at §13; new §13 records the three open decisions and two notes. **The
+  design itself is unchanged.**
+- `MEMORY.md` — this entry.
+
+### Verified
+
+Nothing was built, so there is nothing to verify beyond the claims made above.
+Each was checked rather than asserted: token existence by `grep` over
+`tokens.css`; the six `--nav-h` dependencies by `grep -rn 'var(--nav-h)' src/`;
+`.pc-category` opacity by reading `ProjectCard.astro`; the existing hero
+animation by reading `SectionDiagram.astro:201-214`. `npm run verify` was not
+re-run — no code changed, only two Markdown files.
+
+### Where a fresh session picks up
+
+**To implement the stylization pass** — read the spec, answer §13.1 and §13.2
+with the user (13.1 in particular is a real trade, not a formality), then build.
+The verification bar in §10 is mandatory for this work because it is visible UI:
+full axe sweep, all pages × 2 viewports × 2 themes.
+
+**Everything else still outstanding**, unchanged from Session 2:
+
+- 11 launch placeholders in `src/site.config.ts` — phone, email, address and the
+  APEGA/EGBC permit numbers are the blocking ones.
+- Google Rich Results Test never run (needs a public URL; nothing is deployed).
+- The analytics beacon has never executed in a browser.
+- Backlog items 2 (city landing pages) and 4 (prequalification badges) are
+  `TODO`; item 9 (CI) is blocked on `tests/` existing.
+- The six articles still need P.Eng. review before publishing.
+- `stats.projectsDelivered: 200` and `yearsExperience: 15` still unverified.
+- **Nothing is pushed.** Branch `revamp`, local only.
