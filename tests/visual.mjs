@@ -62,18 +62,36 @@ try {
     ok(tokens.hatchGap === '7px', '--hatch-gap defined', tokens.hatchGap || '(unset)');
     ok(tokens.gridLine.length > 0, '--grid-line defined', '(unset)');
 
-    // Every device instance must be out of the accessibility tree: either a
-    // pseudo-element (nothing in the DOM) or explicitly aria-hidden.
+    const placement = await page.evaluate(() => ({
+      insetBandsWithGrid: document.querySelectorAll('.band-inset.sheet-grid').length,
+      insetBands: document.querySelectorAll('.band-inset').length,
+      gridOnInk: document.querySelectorAll('.band-ink.sheet-grid').length,
+      chainage: document.querySelectorAll('.chainage').length,
+      matchLine: document.querySelectorAll('.match-line').length,
+      chainageWithText: Array.from(document.querySelectorAll('.chainage')).filter(
+        (el) => el.textContent.trim().length > 0
+      ).length,
+    }));
+
+    ok(
+      placement.insetBandsWithGrid === placement.insetBands,
+      'every inset band on the homepage carries the grid wash',
+      `${placement.insetBandsWithGrid} of ${placement.insetBands}`
+    );
+    ok(placement.gridOnInk === 0, 'the grid wash is not applied to ink bands', `${placement.gridOnInk} found`);
+    ok(placement.chainage >= 1, 'the homepage carries a chainage rule', `${placement.chainage} found`);
+    ok(placement.matchLine >= 1, 'the homepage carries a match line', `${placement.matchLine} found`);
+    ok(
+      placement.chainageWithText === 0,
+      'no .chainage carries text — tick geometry only, never invented station numerals',
+      `${placement.chainageWithText} with text`
+    );
+
     const leaked = await page.$$eval(
       '.sheet-grid, .hatch-cut, .hatch-fill, .reg-marks, .chainage, .match-line',
       (els) =>
         els
-          .filter((el) => {
-            // A device carrying real content is fine; a device that IS the
-            // content must be hidden from assistive technology.
-            const decorativeOnly = el.dataset.decorative === 'true';
-            return decorativeOnly && el.getAttribute('aria-hidden') !== 'true';
-          })
+          .filter((el) => el.dataset.decorative === 'true' && el.getAttribute('aria-hidden') !== 'true')
           .map((el) => `${el.tagName.toLowerCase()}.${el.className}`)
     );
     ok(leaked.length === 0, 'purely decorative devices are aria-hidden', leaked.join(', '));
