@@ -10,7 +10,14 @@
     "dev:full": "npm run build && wrangler pages dev dist --port 8788",
     "check": "astro check",
     "verify": "astro check && astro build",
-    "deploy": "npm run build && wrangler pages deploy dist"
+    "deploy": "npm run build && wrangler pages deploy dist",
+    "test:smoke": "node tests/smoke.mjs",
+    "test:axe": "node tests/axe.mjs",
+    "test:layout": "node tests/layout.mjs",
+    "test:contrast": "node tests/contrast.mjs",
+    "test:interaction": "node tests/interaction.mjs",
+    "test:motion": "node tests/motion.mjs",
+    "test": "npm run build && npm run test:axe && npm run test:layout && npm run test:contrast && npm run test:interaction && npm run test:motion"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
@@ -24,6 +31,8 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "@cloudflare/workers-types": "^5.20260920.1",
+    "axe-core": "^4.13.0",
+    "playwright-core": "^1.63.0",
     "typescript": "^5.7.2",
     "wrangler": "^4.135.0"
   },
