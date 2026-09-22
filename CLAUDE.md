@@ -202,11 +202,18 @@ session, and what should be re-run after meaningful UI or content changes:
    path, honeypot, and graceful failure when Resend rejects.
 6. Horizontal overflow and console errors at 390px.
 
-Chromium for this is already cached at
+All six are automated. Run `npm test` — it builds, then runs the axe sweep,
+the layout/console/payload sweep, the contrast probe, the interaction suite and
+the motion guards. See [`tests/README.md`](tests/README.md) for what each one
+covers and for the two numbers in `tests/baseline.json` that must not go up.
+
+The harness drives the Chromium already cached at
 `~/Library/Caches/ms-playwright/chromium-*/chrome-mac/Chromium.app/Contents/MacOS/Chromium`
-and can be driven with `playwright-core` pointed at that `executablePath`. The
-scripts used last session lived in a temp directory and no longer exist; see the
-note in `MEMORY.md` about optionally adding them under `tests/`.
+through `playwright-core`; override the location with `CHROMIUM_PATH`.
+
+Item 5 (the contact API under `wrangler pages dev`) is **not** in the harness —
+it needs a Wrangler process and Resend credentials. Exercise it by hand per
+`docs/DEPLOYMENT.md` when the Function or the form changes.
 
 ---
 
