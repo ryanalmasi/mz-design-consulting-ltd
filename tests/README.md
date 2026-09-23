@@ -17,6 +17,8 @@ Individual checks, each of which needs `dist/` to exist (`npm run build`):
 | `npm run test:contrast` | WCAG ratios computed analytically from the live token values, in both themes. |
 | `npm run test:interaction` | Project filter, mobile drawer, FAQ, and the card imagery's keyboard parity. |
 | `npm run test:motion` | That no `.reveal` content is ever stuck hidden — without `animation-timeline`, under reduced motion, or when already in the viewport on load. |
+| `npm run test:visual` | 24 checks: the display type scale (ceiling and floor), the drawing devices (grid wash, chainage, match line), nav condense (`--nav-h` constant, logo scale/padding actually change on scroll), and component detailing (registration ticks, schedule strip). |
+| `npm run test:smoke` | Fast sanity check that `dist/` built at least 20 pages, the homepage is in the list, `astro preview` actually serves it with a 200, and the title renders. Not part of `npm test`; run standalone as a quick first check. |
 
 ## `baseline.json`
 

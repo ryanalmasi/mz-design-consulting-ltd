@@ -38,6 +38,25 @@ const PAIRS = [
     layers: ['var(--grid-line)', 'var(--grid-line)'],
     min: 4.5,
   },
+  // Task 14's project-card hover wash (.pc-body::before) — the same
+  // background-image-makes-axe-indeterminate case as the grid wash above,
+  // now covered analytically. .pc-summary and .pc-metric-label both use
+  // var(--text-muted) (confirmed by reading ProjectCard.astro), composited
+  // over the hatch ink on the card's own raised surface.
+  {
+    name: '.pc-summary text over the card hover hatch',
+    fg: 'var(--text-muted)',
+    bg: 'var(--bg-raised)',
+    layers: ['var(--hatch-cut-ink)'],
+    min: 4.5,
+  },
+  {
+    name: '.pc-metric-label text over the card hover hatch',
+    fg: 'var(--text-muted)',
+    bg: 'var(--bg-raised)',
+    layers: ['var(--hatch-cut-ink)'],
+    min: 4.5,
+  },
 ];
 
 const { base, stop } = await startPreview();

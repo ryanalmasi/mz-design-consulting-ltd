@@ -35,7 +35,7 @@ const jsBytes = (() => {
 section('payload');
 console.log(`  shipped JS: ${jsBytes} bytes (baseline ${baseline.js.bytes})`);
 ok(
-  baseline.js.bytes === 0 || jsBytes <= baseline.js.bytes,
+  jsBytes <= baseline.js.bytes,
   'shipped JavaScript did not grow',
   `now ${jsBytes}, baseline ${baseline.js.bytes}`
 );

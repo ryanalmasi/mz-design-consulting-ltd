@@ -289,59 +289,6 @@ a:hover {
   mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent);
 }
 
-/* 45° section hatching, in the two directions a real section uses: cut leans
-   one way, fill the other. */
-.hatch-cut,
-.hatch-fill {
-  background-repeat: repeat;
-}
-
-.hatch-cut {
-  background-image: repeating-linear-gradient(
-    45deg,
-    var(--hatch-cut-ink) 0 1px,
-    transparent 1px var(--hatch-gap)
-  );
-}
-
-.hatch-fill {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    var(--hatch-fill-ink) 0 1px,
-    transparent 1px var(--hatch-gap)
-  );
-}
-
-/* Registration marks: the L-shaped corner ticks a drawing sheet carries for
-   alignment. Two pseudo-elements, four corners, via corner-anchored gradients. */
-.reg-marks {
-  position: relative;
-}
-
-.reg-marks::before,
-.reg-marks::after {
-  content: '';
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  pointer-events: none;
-  border-color: var(--line-strong);
-  border-style: solid;
-  transition: border-color var(--dur) var(--ease);
-}
-
-.reg-marks::before {
-  top: -1px;
-  left: -1px;
-  border-width: 1px 0 0 1px;
-}
-
-.reg-marks::after {
-  right: -1px;
-  bottom: -1px;
-  border-width: 0 1px 1px 0;
-}
-
 /*
  * A chainage rule: tick geometry only.
  *
@@ -641,5 +588,23 @@ a:hover {
   .site-nav,
   .skip-link {
     display: none;
+  }
+
+  /* Scroll-driven view()/scroll() timelines have no defined behaviour when
+     printing or exporting to PDF — a plausible path for this B2B site's
+     buyers on a project page. Force both scroll-driven animations back to
+     their fully-visible resting state rather than leaving them to whatever
+     the print engine happens to do. */
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  /* SectionDiagram.astro's hero sweep: scaleX(0) is what clips the
+     existing-ground polyline until the animation runs. Force it open. */
+  .sweep-rect {
+    transform: none !important;
+    animation: none !important;
   }
 }
