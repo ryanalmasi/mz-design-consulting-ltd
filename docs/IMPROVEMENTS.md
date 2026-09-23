@@ -210,6 +210,26 @@ under construction — would do more for credibility than anything else on this
 list. Drop a file into `src/assets/images/` and update the `image:` path in the
 relevant Markdown; Astro regenerates every responsive size automatically.
 
+### What the 2026-09-21 stylization pass unlocks once real photographs exist
+
+The visual work done in that pass was deliberately built to be photo-ready. It
+treats imagery as supporting because the seven stock photographs carried over
+from the old site cannot carry a photo-led layout — one is 289×175. With real
+project photography, these become available without redesigning anything:
+
+- **Full-bleed photographic section breaks** between major sections, using the
+  `.match-line` device as the caption rule.
+- **A photographic or video hero** as an alternative to the section diagram.
+  The diagram stays as the fallback and on inner page headers.
+- **Relaxing or removing the duotone.** It exists to make seven mismatched
+  stock images read as one system. Consistent, high-resolution photography of
+  your own work does not need it — it is one token (`--duotone-wash`) and two
+  short rules in `ProjectCard.astro` and `ArticleCard.astro`.
+- **Larger project-detail hero images**, which currently sit modest because the
+  sources are not sharp enough to go bigger.
+- **Before / during / after earthworks sequences** — the most persuasive format
+  available to this business, and impossible with stock imagery.
+
 ---
 
 ### 8. A booking link — `TODO`

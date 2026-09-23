@@ -1,10 +1,12 @@
 # UI stylization — enriching the drawing-sheet language
 
 **Date:** 2026-09-21
-**Status:** approved design, not yet implemented.
-**→ Read [§13](#13-open-decisions--answer-before-starting) first.** Three
-decisions need answers before any code is written; one of them (the nav) has
-ripple beyond this spec.
+**Status:** implemented. See `docs/superpowers/plans/2026-09-21-ui-stylization.md`
+for the plan it was built from, and the Session 5 entry in `MEMORY.md` for what
+was verified.
+**§13 is resolved:** nav condenses padding and logo scale only (`--nav-h` fixed);
+`tests/` shipped as its own pass first; the `.pc-category` contrast clause was
+dropped as unnecessary.
 **Scope:** visual treatment only. No content, routing, schema or form changes.
 
 ---

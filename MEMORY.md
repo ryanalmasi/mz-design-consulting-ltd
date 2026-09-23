@@ -490,3 +490,461 @@ full axe sweep, all pages × 2 viewports × 2 themes.
 - The six articles still need P.Eng. review before publishing.
 - `stats.projectsDelivered: 200` and `yearsExperience: 15` still unverified.
 - **Nothing is pushed.** Branch `revamp`, local only.
+
+---
+
+## Session 4 — 2026-09-21 — Implementation plan for the stylization pass
+
+### Goal
+
+User asked to pick up where Session 3 left off, flagging that they were running
+a large model **only up to the implementation step** and that the code writing
+would happen after. So this session closed the spec's open decisions and wrote
+the plan; it wrote no site code.
+
+### Decisions
+
+The spec's §13 held three open items. All three were put to the user with the
+trade-offs and their answers are now binding. **Do not reopen them.**
+
+- **§13.1 — the nav condenses padding and logo scale only. `--nav-h` stays
+  fixed.** The alternative (animating the bar height) was presented with its
+  real cost: `--nav-h` is read by six rules outside `Nav.astro`
+  (`global.css:29`, `Nav.astro:98`, `services.astro:206,216`,
+  `insights/[...slug].astro:244,251`), and animating it desynchronises every
+  scroll offset from the real bar, so in-page anchors land underneath it. The
+  user chose the fixed-height option. The plan adds a regression test that
+  asserts the bar height is constant across a scroll *and* that a deep-linked
+  anchor still clears the bar, so this cannot be traded away by accident later.
+- **§13.2 — `tests/` ships as its own pass, first, against the current UI.**
+  Two passes rather than one. A regression then shows up as a test flipping
+  rather than as a number someone has to remember, and Pass A is committed
+  green before any pixel moves.
+- **§13.3 — the `.pc-category` contrast clause is dropped**, as the Session 3
+  review recommended. The chip is `background: var(--ink)`, opaque, so the
+  duotone beneath cannot affect it. The plan asserts it *stays* opaque instead.
+
+Two further calls made while writing the plan, both worth knowing because a
+later session could reasonably undo them:
+
+- **The duotone applies to card media only** (`.pc-media`, `.ac-media`), not to
+  the three large single images — the project detail hero, the article hero,
+  the About intro. Spec §6 says "all project and article imagery"; this is a
+  narrower reading, on the grounds that the duotone's job is making a *grid* of
+  seven mismatched stock photos read as one set. A lone large image has no
+  neighbours to clash with, and greying out the single photograph of the work
+  makes it look like a placeholder. **Flagged as a taste call to look at live**
+  (plan task 10, step 7); it reverts by itself without touching anything else.
+- **Test files are `.mjs`, deliberately.** `tsconfig.json` includes `**/*.ts`,
+  `**/*.tsx` and `**/*.astro` only, so `.mjs` keeps the harness out of
+  `astro check` and the 0/0/0 bar keeps measuring the site rather than the
+  tests. A `.ts` file added under `tests/` would enter the type check and has to
+  satisfy `astro/tsconfigs/strict`.
+
+### Changed
+
+- `docs/superpowers/plans/2026-09-21-ui-stylization.md` — new, ~1100 lines. 15
+  tasks: six building `tests/` against the current UI (Pass A), eight doing the
+  visual work (Pass B), one closing out docs and the log. Every task carries the
+  files it touches, the assertion to write first, the command to run, the
+  expected failure, the implementation, and the commit message.
+- `MEMORY.md` — this entry.
+
+**No site code changed. `npm run verify` was not re-run** — nothing it measures
+moved. The last recorded result stands at 0 errors, 0 warnings, 0 hints.
+
+### Things found while writing the plan that are not in the spec
+
+Each was checked against the code, not assumed:
+
+1. **The hero draw-in cannot reuse `stroke-dasharray` for the existing-ground
+   polyline.** That path is *visually dashed* (`stroke-dasharray="10 6"` in
+   `SectionDiagram.astro:95`). Using the same property for a draw-in makes the
+   dashes crawl instead of the line drawing. The plan reveals the ground with an
+   animated clip sweep instead, which leaves the dash pattern alone. Spec §7
+   says "polylines animate `stroke-dashoffset`"; for that one path it cannot.
+2. **`.ac-media` has no `position`** (`ArticleCard.astro:83`). The duotone tint
+   is an `::after` with `inset: 0`, so without adding `position: relative` the
+   tint escapes to the nearest positioned ancestor and covers the whole card.
+   `.pc-media` already has it. Silent failure, easy to ship.
+3. **`--logo-scale` and `--nav-pad` must be `@property`-registered** or the nav
+   condense will not interpolate — an unregistered custom property holding a
+   bare number does not animate at all, it snaps.
+4. **The hatch inks cannot be derived only in `:root`.** `--cut` and `--fill`
+   are *not* redefined in dark mode (only `--accent` switches to `--cut-light`),
+   so a hatch keyed to them reads too dark on the dark grounds. The plan defines
+   `--hatch-cut-ink` / `--hatch-fill-ink` in all three theme blocks. Gotcha #4's
+   shape, in a new place.
+5. **A grid wash on a band will legitimately raise axe's colour-contrast
+   *incomplete* count**, because a `background-image` makes axe unable to
+   determine contrast for text over it. That is not a violation and not a
+   regression. The plan holds that count to a committed number in
+   `tests/baseline.json` and requires re-measuring it in the same commit as the
+   change that moved it, with the reason — never silently, and never to make an
+   unrelated failure disappear. `tests/contrast.mjs` measures the same pairs
+   analytically and more strictly, against the *darkest* point of the wash
+   (two crossing 50% lines) rather than its average.
+
+### Verified
+
+Nothing was built, so there is nothing to verify beyond the claims above. Each
+was checked rather than asserted: the six `--nav-h` dependencies by
+`grep -rn 'var(--nav-h)' src/`; `.ac-media`'s missing `position` and
+`.pc-category`'s opaque `var(--ink)` background by reading the two card
+components; the existing draw-in and its hard-coded `stroke-dasharray: 1085` by
+reading `SectionDiagram.astro:199-222`; the theme token coverage by reading all
+three blocks of `tokens.css`; the `.mjs` exemption by reading `tsconfig.json`;
+and the cached Chromium by `ls` on
+`~/Library/Caches/ms-playwright/chromium-1179/chrome-mac/Chromium.app/Contents/MacOS/Chromium`,
+which exists.
+
+### Known issues / next steps
+
+- **The plan is written but not executed.** Start at Pass A task 1. Pass A must
+  be committed green against the *current* UI before any visual change — if a
+  check fails there, fix the check or record the number, do not change the site.
+- **The plan is not committed.** `CLAUDE.md` says commit only when the user asks
+  and they had not at the time of writing.
+- **Two gaps in the plan are stated in it rather than solved**, in its
+  self-review section: the harness simulates "`animation-timeline` unsupported"
+  with an injected stylesheet rather than a browser that genuinely lacks the
+  feature, and the contact API (verification item 5) stays a manual check
+  because it needs `wrangler pages dev` and Resend credentials.
+- **Backlog item 9 (CI) becomes unblocked** the moment Pass A lands, but no
+  workflow is added — that is still its own piece of work.
+- Everything outstanding from Session 3 is unchanged: 11 launch placeholders,
+  Google Rich Results Test never run, the analytics beacon never executed in a
+  browser, backlog items 2 and 4, the six articles awaiting P.Eng. review, and
+  the two unverified stats. **Nothing is pushed.** Branch `revamp`, local only.
+
+---
+
+## Session 5 — 2026-09-23 — The stylization pass, and a persistent test harness
+
+### Goal
+
+Implement `docs/superpowers/specs/2026-09-21-ui-stylization-design.md` — the
+approved visual pass enriching the drawing-sheet language — after answering the
+three open decisions in its §13, then run full verification, write the closing
+documentation, and log this session. Executed as 15 tasks under SDD (see
+`.superpowers/sdd/2026-09-21-ui-stylization/progress.md` for the complete,
+authoritative task-by-task ledger this entry draws from): Pass A (tasks 1–6)
+built a Playwright + axe-core verification harness under `tests/` against the
+*current* UI; Pass B (tasks 7–14) did the visual work; task 15 (this entry) is
+final verification and close-out. Task 15 itself needed three rounds of
+corrective fixes before it could close — see below.
+
+### Decisions
+
+**The three §13 decisions, and how they held up during implementation:**
+
+- **§13.1 — nav condenses padding and logo scale only; `--nav-h` stays fixed.**
+  Held throughout. Task 13's review confirmed `--nav-h` and `.nav-inner`
+  height genuinely untouched by direct diff read; the plan's own regression
+  test (bar height constant across a scroll, deep-linked anchor still clears
+  the bar) passed at every subsequent check, including the final Session 5
+  re-verification. Progress-log framing: "the plan's single most binding
+  decision (`--nav-h` fixed) held throughout."
+- **§13.2 — `tests/` ships as its own pass, first, against the current UI.**
+  Held. Pass A (tasks 1–6) landed a green baseline (axe 89/89, layout 177/177,
+  contrast 22/22, interaction 35/35, motion 67/67 vacuous-pass, verify 0/0/0)
+  before any pixel of Pass B moved, exactly as designed — a regression in
+  Pass B then showed up as a test flipping, which is precisely what happened
+  in this session's fix chain (below), rather than as a remembered number.
+- **§13.3 — the `.pc-category` contrast clause is dropped.** Held. The chip
+  stayed `background: var(--ink)`, opaque; `tests/interaction.mjs`'s "duotone"
+  section asserts it *stays* opaque rather than re-measuring contrast over the
+  image, and that assertion has passed in every run including the final one.
+
+**Task 10's duotone scope call.** The duotone applies to card media only
+(`.pc-media`, `.ac-media`), not to the three large single images — the
+project-detail hero, the article hero, the About intro. Spec §6 literally says
+"all project and article imagery"; this is a deliberately narrower reading, on
+the grounds that the duotone's job is making a *grid* of seven mismatched
+stock photos read as one set, and a lone large image has no neighbours to
+clash with. Confirmed still true by reading both detail-page templates
+directly in this session: `src/pages/projects/[...slug].astro` and
+`src/pages/insights/[...slug].astro` both render their hero `<Image>` with no
+duotone filter class, while both also carry `.section.band-inset.sheet-grid`
+lower on the page — the grid wash *is* applied to detail pages, only the
+duotone is scoped away from the three large heroes. This was flagged in the
+plan as a taste call to look at live and remains one (see Known issues).
+
+**Notable in-flight rulings a later reader should know about, and might
+otherwise second-guess** — pulled from `progress.md`'s task-by-task entries:
+
+- **Task 8 — `tests/lib/color.mjs` widened to parse the `color(srgb r g b [/
+  a])` format.** This Chromium build (138.0.7204.23, the one pinned for the
+  harness) serializes *every* `color-mix()` result this way rather than as
+  `rgb()`/`rgba()`. Without the widening, `tests/contrast.mjs` crashes
+  (uncaught exception, not a failed assertion) the instant it evaluates a
+  `color-mix()`-based token such as `--grid-line`. This is a real,
+  independently-verified environmental fact about the test browser, not a
+  workaround for a site bug — `color.mjs` scales 0–1 floats to 0–255 for r/g/b
+  and leaves alpha unscaled, hand-traced and confirmed correct in review. Task
+  10's `--duotone-wash` (also `color-mix()`-based) needed the identical fix
+  regardless, so this was necessary shared infrastructure, not scope creep.
+- **Task 12 — a genuine self-contradiction in the plan's own text, resolved.**
+  The plan's Step 4 CSS comment, meant to be copied verbatim, literally
+  contained the digit string "1085" in its explanatory prose, while the same
+  step's grep check required that exact string to be *absent* from the final
+  file (the point being: no trace of the old magic number in functional code).
+  Resolved by rewording the one sentence to describe that a number had existed
+  without repeating the digits ("the previous version hard-coded the path's
+  pixel length" instead of naming it). Purely cosmetic; no geometry or
+  animation logic changed.
+- **Task 13 — two real bugs found in the plan's own literal prescribed code.**
+  (1) The brief's exact 3-declaration `animation`/`animation-timeline`/
+  `animation-range` CSS form gets folded by Vite's esbuild CSS minifier into a
+  single `animation` shorthand the pinned test Chromium doesn't support in
+  shorthand form — `animation-name` silently computes to `none`, so the nav
+  condense never ran in the *built* output despite looking correct in source.
+  Fixed with a `--nav-timeline` custom-property indirection (a minifier can't
+  fold through a `var()`). (2) The brief's literal test capture used two-arg
+  `scrollTo(0, 0)` and read the computed style in the same tick; this fails
+  deterministically because of pre-existing `scroll-behavior: smooth` (the
+  scroll position hadn't reached 0 yet) *and* because a scroll-timeline-driven
+  custom property only recomputes on the next rendering frame even with an
+  instant scroll. Fixed with `behavior: 'instant'` plus a short wait. Both were
+  verified directly against the diff before being accepted, and — critically
+  for this session — **this exact minifier-folding bug class recurred on
+  `.reveal` and is the root cause of the entire Task 15 fix chain below.**
+- **Task 14 — a baseline-vs-violation mismatch.** The plan anticipated real
+  axe contrast *violations* on `.pc-summary`/`.pc-metric-label` as the failure
+  mode, with a sanctioned fix (lower `--hatch-cut-ink`'s mix percentage). The
+  actual outcome was different: zero violations anywhere; instead
+  `colorContrastIncomplete` rose from 1810 to 2114, because `.pc-body::before`'s
+  `background-image` (even at zero opacity at rest) makes axe unable to rule
+  out contrast for every card-body text node — axe flags the *presence* of a
+  background-image, not its strength. The implementer correctly recognized
+  this matched the *already-established* baseline-re-measure protocol from
+  Tasks 9/10, not the plan's specific-but-inapplicable suggested fix, and used
+  the right one. No token was touched; zero real contrast risk either way.
+
+**The entire post-Pass-B fix chain, run inside this task (Task 15).** The
+first genuinely clean build+test run of the whole plan (`rm -rf dist &&
+npm run verify && npm test` — Pass A and Pass B had each been verified
+incrementally, but never together from a truly clean `dist/`) surfaced a real,
+load-bearing regression that had shipped, reviewed, and gone unnoticed since
+Task 11's original commit (`1b6001c`):
+
+1. **Bug 1 — the same minifier-shorthand-folding bug class Task 13 already
+   found, recurring on `.reveal`.** `.reveal`'s three declarations
+   (`animation`/`animation-timeline`/`animation-range`) were folded by the CSS
+   minifier into one `animation: linear both reveal-in view()` shorthand the
+   pinned Chromium doesn't support, so `.reveal` content sat permanently
+   invisible or stuck at a fractional opacity across `/index.html`,
+   `/about.html`, `/insights.html`, `/projects.html` and `/services.html`.
+   Task 11 shipped *before* Task 13 discovered this bug class, and nobody
+   went back to check whether the identically-shaped `.reveal` rule had the
+   same exposure. It did. Fixed (commit `5f48d00`) with the same
+   `--reveal-timeline` custom-property indirection pattern.
+   A `/404.html` console-error finding investigated alongside this turned out
+   to be unrelated: a stray leftover `astro dev` process from an unrelated
+   earlier session was squatting on port 4321 and intercepting the harness's
+   requests. No code fix — killing the process resolved it.
+2. **Bugs 2 and 3 — surfaced only once Bug 1 was genuinely fixed, both
+   confirmed pre-existing since Task 11's original commit** (verified via a
+   `git worktree` comparison against `1b6001c`, before Tasks 12–14 — not
+   introduced by this session, and never actually exercised end-to-end by
+   `npm test` until now, because Bug 1 had silently prevented `.reveal`'s
+   animation from ever running in any built output before, which coincidentally
+   made every `.reveal` check pass by accident). (a) A real design gap:
+   `animation-range: entry 10% cover 30%` legitimately computed ~43% opacity
+   for large structural blocks already substantially inside the viewport at
+   load with zero scrolling — exactly the risk Session 3's spec review had
+   flagged in §13.4 but which nothing had caught until Bug 1 stopped masking
+   it. This was also the direct cause of 4 real axe contrast violations on
+   `/services.html` (the blended partial-opacity ink failed WCAG). Fixed
+   (commit `4c5a5c0`) via genuine empirical iteration — `entry 10% cover 30%`
+   → `entry 0% entry 5%` → `entry 0% entry 15%` (worse, confirmed the wrong
+   direction) → `entry 0% entry 2%` (stable across 5 runs) → `entry 0% entry
+   4%` (regressed) → settled on **`entry 0% entry 2%`**. (b)
+   `tests/motion.mjs`'s "animation-timeline unsupported" simulation had never
+   actually applied since Task 6 wrote it: its `ctx.addInitScript` callback
+   hit a null `document.documentElement` in this Playwright/Chromium
+   combination and threw silently. Fixed in the same commit by switching to
+   per-page `page.addStyleTag()` issued after `goto` and before assertion.
+3. **Bug 4 — one more test-only inconsistency, found during Bug 3's
+   iteration.** `tests/motion.mjs`'s deep-link check asserted *all* `.reveal`
+   elements unfiltered, incorrectly flagging `ol.process` (genuinely below the
+   fold from that anchor) as "stuck," while its sibling check just above it
+   already filtered to near-viewport elements. Fixed (commit `7ae8e41`) by
+   applying the same viewport-proximity filter to the deep-link check.
+
+All three fix-round commits were independently reviewed and approved (0
+Critical/Important findings across all three). Each round's fix was verified
+against the actual built `dist/` CSS and/or the live preview server's served
+bytes, not just source. **A worth-noting design trade-off**: the reviewer
+flagged, and the implementer agreed, that the tightened `entry 0% entry 2%`
+range makes the reveal effect closer to a near-instant "flick" than the
+originally-intended graduated scroll-tied transition, especially for large
+elements. This was necessary to fix a real correctness/accessibility bug and is
+judged a legitimate motion-design trade-off, not a defect — but it is a
+visible behaviour change from the spec's original intent and worth a second
+look once someone can watch it scroll.
+
+### Changed
+
+- `docs/superpowers/plans/2026-09-21-ui-stylization.md` — new in an earlier
+  session, executed here. (Untouched by this session except that its own
+  markdown fence-count bug in the Task 14 section was newly discovered — see
+  Known issues.)
+- **Pass A** (`tests/` harness, commits `f2da1bf..ab52cd5`): `tests/browser.mjs`,
+  `server.mjs`, `pages.mjs`, `report.mjs`, `smoke.mjs`, `axe.mjs`, `layout.mjs`,
+  `contrast.mjs` (+ `tests/lib/color.mjs`), `interaction.mjs`, `motion.mjs`,
+  `baseline.json`, `tests/README.md`; `package.json` test scripts; a
+  `CLAUDE.md` paragraph pointing at the harness.
+- **Pass B** (visual work, commits `0cd3022..b6bcdc0`): `src/styles/tokens.css`
+  (display type scale, depth-layer tokens, per-theme hatch inks),
+  `src/styles/global.css` (`.sheet-grid`, `.hatch-*`, `.reg-marks`, `.chainage`,
+  `.match-line`, `.reveal`), `src/components/SectionDiagram.astro` (hero
+  draw-in rewrite onto normalised path lengths), `src/components/Nav.astro`
+  (nav condense, `--logo-scale`/`--nav-pad` as `@property`), `src/components/
+  ProjectCard.astro` and `ArticleCard.astro` (duotone, registration ticks),
+  page templates for `index.astro`, `about.astro`, `services.astro`,
+  `insights.astro`, `projects.astro`, and both `[...slug].astro` detail routes
+  (drawing-device placement, schedule-strip markup).
+- **Task 15 fix chain** (commits `5f48d00`, `4c5a5c0`, `7ae8e41`):
+  `src/styles/global.css` (`--reveal-timeline` indirection; `.reveal`'s
+  `animation-range` retuned to `entry 0% entry 2%`), `tests/motion.mjs`
+  (`addStyleTag` replacing `addInitScript`; deep-link check filtered to
+  near-viewport elements matching its sibling).
+- **This session's own edits**: `docs/IMPROVEMENTS.md` (new subsection under
+  item 7, "What the 2026-09-21 stylization pass unlocks once real photographs
+  exist"); `docs/superpowers/specs/2026-09-21-ui-stylization-design.md`
+  (status line changed from "approved design, not yet implemented" to
+  "implemented," §13 marked resolved); `MEMORY.md` (this entry).
+
+### Verified
+
+**From a genuinely clean state** (`lsof -ti:4321,4322 | xargs kill -9`,
+`rm -rf dist`, then `npm run verify && npm test`, one complete successful run,
+all commands run under `nvm use` for Node 22.12.0):
+
+- `npm run verify` (`astro check && astro build`) — **0 errors, 0 warnings, 0
+  hints**, 22 pages.
+- `npm test` (`build && test:axe && test:layout && test:contrast &&
+  test:interaction && test:motion && test:visual`), every suite exit 0:
+  - **axe: 89/89 checks passed.** 1778 undetermined-contrast nodes measured
+    across 22 pages × 4 renderings (theme × viewport) — this is the
+    `background-image`-makes-contrast-indeterminate bookkeeping described in
+    Tasks 9/10/14, not a violation; comfortably under the committed baseline.
+  - **layout: 177/177 checks passed.** Shipped JS: 2087 bytes (baseline 2087,
+    unchanged — the visual pass is CSS-only, as constrained). No horizontal
+    overflow, no console errors, any page, either theme, either viewport.
+  - **contrast: 26/26 checks passed** (11 token pairs × 2 themes, analytic
+    WCAG measurement including the grid wash at its darkest crossing point).
+  - **interaction: 39/39 checks passed** (project filter counts/`aria-pressed`/
+    live region/URL sync/deep-link, mobile drawer, FAQ keyboard operation,
+    duotone at-rest/focus-within/tint-layer/category-chip-opacity). One
+    standalone re-run of this suite, mid-session, hit a 30-second Playwright
+    timeout waiting on `.pc-category` — retried in isolation immediately after
+    and passed 39/39 with no code change; did not recur in the final clean
+    full-suite run recorded above. Treated as a transient flake (system
+    resource contention across repeated browser-context churn), not a
+    regression — flagged here rather than silently discarded.
+  - **motion: 67/67 checks passed.** 17 `.reveal` elements found across the
+    site; all pass under animation-timeline-unsupported simulation,
+    `prefers-reduced-motion: reduce`, and in-viewport-on-load (including the
+    `/services.html#stormwater` deep-link case).
+  - **visual: 24/24 checks passed** (type scale, drawing devices, nav condense,
+    component detailing).
+
+**Step 2 — hand-walk-by-checklist coverage mapping.** No screenshot/visual
+tooling was available to this session, so each bullet from the plan's Step 2
+checklist was instead matched to the automated test that covers its exact
+correctness claim, confirmed passing from the Step 1 run above:
+
+| Step 2 bullet | Covering test | Result |
+|---|---|---|
+| Homepage — hero sequence plays once | *(none — animation feel, not correctness)* | **Not covered — human-review item, see below** |
+| Homepage — chainage rule under the hero | `tests/visual.mjs` "drawing devices" (`placement.chainage >= 1`, no invented station text) | Pass |
+| Homepage — schedule strip (structure only) | `tests/visual.mjs` "component detailing" (`.proof-grid` stays a `<dl>`, tick-mark `::before`, `tabular-nums`) | Pass |
+| Homepage — grid wash on the two inset bands | `tests/visual.mjs` "drawing devices" (`insetBandsWithGrid === insetBands`, `gridOnInk === 0`) + `tests/contrast.mjs` (grid wash at darkest crossing point) | Pass |
+| Homepage — match line above the projects grid | `tests/visual.mjs` "drawing devices" (`placement.matchLine >= 1`) | Pass |
+| `/projects.html` — duotone at rest / colour on tab-through | `tests/interaction.mjs` "duotone" (resting filter ≠ none; focus-within clears filter and tint). `:hover` and `:focus-within` share one comma-joined CSS rule in `ProjectCard.astro`, so the keyboard-tested path is the identical rule pointer-hover also triggers — not a separate untested code path, but true mouse-hover itself was not dispatched by the harness | Pass (mechanism identical to hover; hover-as-pointer-event not literally simulated) |
+| `/projects.html` — filter chips | `tests/interaction.mjs` "project filter" (counts, `aria-pressed`, live region, URL sync, deep link) | Pass |
+| `/projects.html` — registration ticks | `tests/visual.mjs` "component detailing" (`border-top-width ≠ 0`, no `01/02/03` reintroduced) | Pass |
+| `/services.html#grading` — anchor lands below the nav bar, before/after scroll | `tests/visual.mjs` "nav condense" (bar height constant on scroll, `--nav-h` unchanged, anchor clears bar) + `tests/motion.mjs` deep-link scenario. Both exercise `#stormwater`; `#grading` and `#stormwater` are generated from the same templated `{d.id}` mechanism in `services.astro`, confirmed by direct source read | Pass (via the shared generic mechanism, not `#grading` literally) |
+| `/insights.html` — FAQ opens from the keyboard | `tests/interaction.mjs` "faq" (Enter opens/closes, starts closed) | Pass |
+| `/insights.html` — grid wash behind the FAQ | *(no per-page assertion; confirmed by source read: `insights.astro:93` carries `.section.band-inset.sheet-grid`, same token path `tests/contrast.mjs` verifies analytically)* | Confirmed by source read, not a page-specific automated check |
+| Article + project detail page — heroes still full colour | *(no automated assertion; confirmed by source read: both `[...slug].astro` hero `<Image>` elements carry no duotone filter class)* | Confirmed by source read, matches Task 10's reviewed scope call |
+| Article + project detail page — inset bands washed | *(no per-page assertion; confirmed by source read: both detail templates carry `.section.band-inset.sheet-grid`)* | Confirmed by source read |
+| Footer title block and contact form — unchanged | Out of scope for this spec (§9); `tests/layout.mjs` and `tests/interaction.mjs` cover no regressions in what they already test elsewhere on every page | Pass (no regression signal anywhere) |
+
+**Three items are genuinely uncovered by any automated check and need a
+human's eyes** — already known and flagged in `progress.md`, not re-verified
+here: **Task 10's duotone taste-call** (does the grey-down actually read as
+"one system" rather than "washed out"?), **Task 12's hero animation feel**
+(does the draw-in sequence read well, and does it play once rather than
+looping or feeling laggy?), and **Task 14's schedule-strip/card-detail look**
+(does the ruled-schedule stats strip and the card registration-tick detailing
+actually look considered rather than merely pass its structural assertions?).
+All three are at `/index.html`, `/projects.html`, `/insights.html`,
+`/services.html`, both themes, both viewports.
+
+### Known issues / next steps
+
+**Carried forward from Session 3/4, still true:**
+
+- 11 launch placeholders in `src/site.config.ts` — phone, email, address and
+  the APEGA/EGBC permit numbers are the blocking ones.
+- Google Rich Results Test never run (needs a public URL; nothing is deployed).
+- The analytics beacon has never executed in a browser.
+- Backlog items 2 (city landing pages) and 4 (prequalification badges) are
+  `TODO`; item 9 (CI) is unblocked now that `tests/` exists but no workflow is
+  added.
+- The six articles still need P.Eng. review before publishing.
+- `stats.projectsDelivered: 200` and `yearsExperience: 15` still unverified.
+
+**New from this session:**
+
+- **Three human-review items, listed above, need a person to actually look at
+  the live site** — the duotone's taste-call, the hero draw-in's feel, and the
+  schedule-strip/card-detail look. All have full automated *correctness*
+  coverage already (nothing is broken); what's unverified is whether they look
+  right, which no subagent in this SDD run had screenshot tooling to check.
+- **The tightened `.reveal` `animation-range: entry 0% entry 2%` is a
+  near-instant "flick" rather than a graduated scroll-tied reveal**,
+  especially for large structural blocks. Necessary to fix a real correctness
+  and WCAG contrast bug (see Decisions); flagged by both the implementer and
+  an independent reviewer as a legitimate but visible trade-off. Worth
+  revisiting if a future session wants a more graduated feel — but do not
+  loosen the range without re-running `tests/motion.mjs`'s in-viewport-on-load
+  scenario and `tests/axe.mjs`, since loosening it is exactly what caused the
+  original regression.
+- **The CSS minifier's shorthand-folding of `animation`/`animation-timeline`/
+  `animation-range` is a standing risk for any future scroll-driven animation
+  in this codebase**, not just the nav condense (Task 13) or `.reveal` (this
+  session) — it already bit both. Any new rule written as separate
+  `animation`/`animation-timeline` declarations should go through a `var()`
+  indirection (the `--nav-timeline`/`--reveal-timeline` pattern) from the
+  start, and should be checked against the actual built `dist/` CSS, not just
+  source, before being trusted.
+- **The plan document has a markdown fence-count bug of its own.** An odd
+  number of ` ``` ` fence markers inside `docs/superpowers/plans/
+  2026-09-21-ui-stylization.md`'s Task 14 section (the `.project-card`/
+  `.pc-body` CSS blocks render as one unclosed fence) flips the fence-tracking
+  parity for the rest of the file, which broke this plan's own task-extraction
+  tooling for Task 15 (`scripts/task-brief` reported "no heading matching
+  'Task 15'"). Confirmed independently in this session by reading the section
+  directly. Zero effect on the shipped site — a documentation-tooling defect
+  only, not fixed here (out of scope; the workaround was writing
+  `task-15-brief.md` manually from previously-verified plan content).
+- **The plan's own "Known gaps, stated rather than hidden" section is still
+  accurate and still open**, carried forward rather than re-solved by this
+  task: `tests/` is dev-only and not wired into CI (no GitHub Actions
+  workflow — this is backlog item 9, now unblocked but not built); check 5 of
+  spec §10 is *simulated*, not native — `tests/motion.mjs` neutralises
+  `animation-timeline` with an injected stylesheet rather than running an
+  engine that genuinely lacks the feature, which proves content stays visible
+  without the animation but not that the `@supports` guard itself parses
+  correctly in a non-supporting engine; the contact API (`CLAUDE.md`
+  verification item 5) is not in the harness, still needing manual exercise
+  under `wrangler pages dev` with Resend credentials; and `@property` support
+  is assumed for the nav's `--logo-scale`/`--nav-pad` — where unsupported, the
+  nav still works and nothing is hidden, it just stops interpolating, which is
+  the same "degrade to the resting state" contract the reveals follow.
+- **Nothing is pushed.** Branch `revamp`, 19 commits ahead of
+  `origin/revamp`, still local only.
