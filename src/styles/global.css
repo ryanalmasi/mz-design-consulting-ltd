@@ -557,8 +557,26 @@ a:hover {
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
     .reveal {
+      /*
+       * The --reveal-timeline indirection is deliberate, not decorative —
+       * same bug, same fix, as Task 13's --nav-timeline on .site-nav. The
+       * production build's CSS minifier folds a bare
+       * `animation-timeline: view();` declaration into the `animation`
+       * shorthand (producing `animation: … reveal-in view()`), which this
+       * repo's pinned test Chromium does not support in shorthand form even
+       * though it supports the longhand — the animation silently never
+       * runs (animation-name computes to `none`) and the element is stuck
+       * at the `from` keyframe (opacity: 0) forever. Routing the value
+       * through a custom property defeats that shorthand-folding, since the
+       * minifier can't inspect a var(). Verified directly against dist/
+       * output: without this line the built CSS reads
+       * `animation:linear both reveal-in view()` and CSS.supports() rejects
+       * it; with it, animation-timeline stays its own longhand and the
+       * reveal runs.
+       */
+      --reveal-timeline: view();
       animation: reveal-in linear both;
-      animation-timeline: view();
+      animation-timeline: var(--reveal-timeline);
       animation-range: entry 10% cover 30%;
     }
   }
