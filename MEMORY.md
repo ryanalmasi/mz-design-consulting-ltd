@@ -948,3 +948,186 @@ All three are at `/index.html`, `/projects.html`, `/insights.html`,
   the same "degrade to the resting state" contract the reveals follow.
 - **Nothing is pushed.** Branch `revamp`, 19 commits ahead of
   `origin/revamp`, still local only.
+
+---
+
+## Session 6 — 2026-09-23 — Final whole-branch review, fix wave, and a real bug in the test harness itself
+
+### Goal
+
+Finish a consolidated fix wave from the final whole-branch review of Session
+5's completed 15-task UI stylization plan. A prior agent had already made six
+files' worth of uncommitted changes (see below) before being interrupted
+mid-session (accidentally stopped by the user, not a crash). Asked to: verify
+that prior work rather than redo it, then complete four remaining items —
+re-measure a stale contrast baseline, add a regression guard against the
+`.reveal` minifier-fold bug recurring (with a break-then-restore proof it
+actually works), fix a port-collision/leak hazard in the test harness's
+preview-server helper, and commit the plan document (still untracked despite
+the Session 5 spec referencing it by path) — then run the full clean suite and
+commit.
+
+### Decisions
+
+**Verified the six already-uncommitted files before touching anything**, via
+`git diff` against each one, matching the task's description exactly: `.hatch-cut`/`.hatch-fill`/`.reg-marks` deleted from `global.css` (dead, no
+callers) with a new `@media print` block neutralizing `.reveal`/`.sweep-rect`;
+two new `tests/contrast.mjs` `PAIRS` entries for `.pc-summary`/
+`.pc-metric-label` over the card hover hatch; the dead
+`baseline.js.bytes === 0 ||` escape hatch removed from `layout.mjs`; `Nav.astro`'s
+comment corrected from "six rules" to "five"; a pointer comment added to
+`ArticleCard.astro`; `test:visual`/`test:smoke` documented in `tests/README.md`.
+All correct as-is; none re-done.
+
+**Fix 1 (stale baseline) was straightforward** — rebuilt clean, ran
+`test:axe`, got `1778` (down from the committed `2114`), confirmed stable
+across four separate measurements before writing it in.
+
+**Fix 2's guard was designed to fail on the exact original bug, and proven to.**
+Added a check to `tests/motion.mjs` that finds a genuinely below-the-fold
+`.reveal` element on `/index.html` at load (no scroll) and asserts it is
+measurably not at full opacity — the only thing that actually proves the
+scroll-driven timeline is running, since the existing checks only assert
+content isn't *permanently* invisible, which a dead animation trivially
+satisfies (it falls back to fully opaque). Proved this by literally reverting
+`global.css`'s `--reveal-timeline` indirection back to the pre-`5f48d00`
+broken form, rebuilding, confirming the built CSS reproduced the exact folded
+shorthand (`animation:linear both reveal-in view()`), running the new check
+and watching it fail with the predicted signature (`opacity=1
+animationName=none` on every below-the-fold element) while the three
+pre-existing checks all still passed — direct proof they would not have
+caught this — then restoring the fix and confirming the guard passes again.
+
+**Fix 3 turned into a real investigation, and the task's own framing of the
+bug was wrong.** The brief described the hazard as "SIGTERM to the `npx`
+wrapper doesn't reliably kill the `astro` grandchild process." Testing showed
+something more specific and more interesting: Astro 7's `astro preview` does
+not run its server as a child of the invoking process at all — it forks a
+**self-daemonizing background process** (confirmed via `ps`: `PPID 1`, its own
+session) and the `npx` wrapper this harness spawns exits almost immediately
+either way (it either confirms the daemon is up, or prints "already running at
+... (pid N)" and exits if one already exists). So a process-group kill of the
+`npx` process — the fix a literal reading of the brief would produce — does
+nothing at all; it doesn't even reach the real server. Switched the approach
+entirely: `stop()` now shells out to find whatever process is actually
+`LISTEN`ing on the port and kills that directly.
+
+That surfaced a second, worse bug while debugging the first: a naive
+`lsof -ti:PORT` (no socket-state filter) matches *every* socket touching that
+port on **either** end — including the client side of a still-open connection
+to the server. With a real browser under test, this returned three PIDs for
+one running preview server: the actual daemon, plus two of the test run's own
+Chromium helper processes that had made HTTP requests to it. Sending `SIGKILL`
+to one of those — a live, sandboxed Chromium subprocess mistaken for "the port
+owner" — was reproduced hanging the `stop()` call for minutes (long enough
+that `npm run test:contrast` was killed by an external timeout, exit 137,
+twice, before the cause was isolated with a series of standalone repro
+scripts). This reads as a macOS signal-delivery quirk against a sandboxed
+process, not a Node bug, and is worth remembering: **`lsof -ti:PORT` alone is
+not a safe way to identify "the server on this port" when a browser under test
+might also be talking to it.** `-sTCP:LISTEN` fixes it by restricting the match
+to the bound/listening socket only. Reproduced the hang concretely, applied
+the fix, then confirmed `npm run test:contrast` three times back-to-back
+completes in seconds each time with the port verified empty afterward.
+
+**Fix 7 was mechanical** — the plan doc was genuinely just untracked; added
+and committed as its own commit so it's easy to find in history.
+
+**Grouped the six-commit result by concern rather than as one giant commit**,
+since the fixes are logically distinct and a future `git log` reader benefits
+from that separation (dead-code/comment cleanup; baseline re-measure; the
+motion regression guard with its own proof; the server-lifecycle fix with its
+own investigation; the plan doc).
+
+### Changed
+
+- `src/components/ArticleCard.astro`, `src/components/Nav.astro`,
+  `src/styles/global.css`, `tests/README.md`, `tests/contrast.mjs`,
+  `tests/layout.mjs` — the six already-in-progress files, committed as-is
+  (commit `74c3d6c`).
+- `tests/baseline.json` — `colorContrastIncomplete` `2114` → `1778` (commit
+  `253f6d0`).
+- `tests/motion.mjs` — added the fourth check, "motion — reveal is genuinely
+  animating (regression guard)" (commit `a8b371a`).
+- `tests/lib/server.mjs` — added a pre-spawn port-collision check
+  (`portIsOccupied`); rewrote `stop()` to find and kill the actual
+  `LISTEN`-state process on the port via `lsof -ti:PORT -sTCP:LISTEN` instead
+  of signalling the `npx` wrapper or its process group. Exported interface
+  (`startPreview({ port }) -> { base, stop }`) unchanged (commit `6029662`).
+- `docs/superpowers/plans/2026-09-21-ui-stylization.md` — added and committed,
+  previously untracked (commit `ff08145`).
+- `MEMORY.md` — this entry.
+
+### Verified
+
+- **Fix 1**: `lsof -ti:4321,4322 | xargs kill -9; rm -rf dist && npm run build
+  && npm run test:axe` → `(measured 1778 undetermined-contrast nodes across 22
+  pages × 4 renderings)`, `axe: 89/89 checks passed`. Repeated 3 more times
+  (once standalone, twice inside full `npm test` runs after further code
+  changes) — consistently 1778.
+- **Fix 2 break-then-restore**: documented in full in
+  `.superpowers/sdd/2026-09-21-ui-stylization/final-review-fixes-report.md`
+  with both the failing output (`motion: 68/69`, 1 failure, listing 7
+  below-the-fold elements all at `opacity=1 animationName=none`) and the
+  passing output (`motion: 69/69`) after restoring the fix, plus confirmation
+  via `git diff` that the restored region is byte-identical to before the
+  experiment.
+- **Fix 3**: reproduced the hang with standalone scripts under
+  `/private/tmp/.../scratchpad/` (repro4/7/9, not committed — throwaway
+  diagnostics) before and after the `-sTCP:LISTEN` fix; confirmed
+  `lsof -i:4321 -sTCP:LISTEN` returns exactly the real daemon pid where plain
+  `lsof -ti:4321` returned three. Post-fix: `npm run test:contrast` × 3
+  consecutive runs, each passing (`30/30`) in seconds, port empty
+  (`lsof -ti:4321` → nothing) after every run.
+- **Full clean suite, twice** (once mid-session before final commits, once
+  again afterward against the committed state): `lsof -ti:4321,4322 | xargs
+  kill -9; pkill -9 -f ms-playwright; rm -rf dist && npm run verify && npm
+  test`. `npm run check`: **0 errors, 0 warnings, 0 hints**, 22 pages. `npm
+  test`: `axe 89/89` (1778 measured), `layout 177/177`, `contrast 30/30`,
+  `interaction 39/39`, `motion 69/69` (including the new guard), `visual
+  24/24`. All exit 0. `npm run test:smoke` (not part of `npm test`) run
+  separately: `4/4`.
+- `git status` clean after all commits; nothing uncommitted, nothing
+  untracked.
+
+### Known issues / next steps
+
+**Carried forward, still true** (see Sessions 3/4/5 for the full list — not
+re-verified this session, listed once for continuity): 11 launch placeholders
+in `site.config.ts`; Google Rich Results Test never run; analytics beacon
+never executed in a browser; backlog items 2/4/9 open; six articles need
+P.Eng. review; `stats.projectsDelivered`/`yearsExperience` unverified; the
+three human-review items (duotone taste-call, hero draw-in feel,
+schedule-strip/card-detail look); `tests/` still not wired into CI; the
+`animation-timeline`-unsupported simulation in `tests/motion.mjs` is still
+simulated, not native; the contact API still needs manual exercise under
+`wrangler pages dev` with Resend credentials; `docs/superpowers/plans/
+2026-09-21-ui-stylization.md`'s own fence-count bug in its Task 14 section is
+still unfixed (documentation-tooling only, zero effect on the shipped site).
+
+**New from this session:**
+
+- **`tests/lib/server.mjs`'s reasoning comment now documents a subtler
+  failure mode than a first read of the original task brief assumed** — a
+  self-daemonizing `astro preview` process, plus `lsof`'s port-matching
+  including client-side connections. Both are explained at length in the
+  file's own comments and in the commit message for `6029662`, precisely so a
+  future session doesn't "simplify" it back toward the process-group-kill
+  approach that was tried and shown not to work.
+- **`astro preview`'s daemon behaviour (persists across separate CLI
+  invocations, keyed by port, with its own `astro preview stop` command) is
+  Astro-7-specific and wasn't previously documented anywhere in this repo.**
+  If a future Astro upgrade changes this, `-sTCP:LISTEN` should keep working
+  regardless (it only assumes "the server listens on the port," not any
+  particular process topology), but it's worth re-checking if `stop()` ever
+  stops working after a dependency bump.
+- **Three standalone diagnostic scripts used to isolate the port-collision
+  bug were written under this session's scratchpad directory (outside the
+  repo) and were not committed** — deliberately throwaway, per the same
+  reasoning Session 5 flagged about not adding permanent test scripts outside
+  `tests/` without being asked.
+- Full report for this session's fix wave, including both proof transcripts
+  in full, is at `.superpowers/sdd/2026-09-21-ui-stylization/
+  final-review-fixes-report.md`.
+- **Nothing is pushed.** Branch `revamp`, now 24 commits ahead of
+  `origin/revamp`, still local only.
