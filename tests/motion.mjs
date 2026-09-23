@@ -106,6 +106,52 @@ try {
     ok(nearAfterJump.length === 0, '.reveal content visible after a mid-page deep link', nearAfterJump.map((a) => `${a.sel} opacity=${a.opacity}`).join('\n      '));
     await ctx.close();
   }
+
+  // 4 — regression guard: the reveal is genuinely ANIMATING, not just "never
+  //     stuck". Checks 1–3 above only assert content is visible, and this
+  //     bug class's actual failure mode (a CSS minifier folding
+  //     `animation`/`animation-timeline` into an unsupported shorthand, as
+  //     documented at length in global.css next to --reveal-timeline) makes
+  //     animation-name compute to `none`, so the element falls back to its
+  //     resting, fully-opaque state — which is indistinguishable from
+  //     "working" to every check above. The only way to actually catch that
+  //     regression is to find a genuinely below-the-fold .reveal element at
+  //     load and confirm it is NOT at full opacity, proving the timeline is
+  //     really driving the animation rather than the element just sitting at
+  //     its default visible state.
+  section('motion — reveal is genuinely animating (regression guard)');
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto(`${base}/index.html`, { waitUntil: 'load' });
+    await page.waitForTimeout(200);
+
+    const belowFold = await page.$$eval('.reveal', (els) =>
+      els
+        .map((el) => ({
+          sel: `${el.tagName.toLowerCase()}.${el.className}`,
+          top: el.getBoundingClientRect().top,
+          opacity: Number(getComputedStyle(el).opacity),
+          animationName: getComputedStyle(el).animationName,
+        }))
+        .filter((r) => r.top >= window.innerHeight)
+    );
+
+    ok(
+      belowFold.length > 0,
+      '/index.html has at least one .reveal element fully below the fold at load (test precondition)',
+      `found ${belowFold.length}`
+    );
+
+    const genuinelyAnimating = belowFold.filter((r) => r.opacity < 0.99 && r.animationName !== 'none');
+    ok(
+      belowFold.length === 0 || genuinelyAnimating.length > 0,
+      'at least one below-the-fold .reveal element is measurably not at full opacity on load, proving the scroll-driven animation is actually running',
+      belowFold.map((r) => `${r.sel} top=${Math.round(r.top)} opacity=${r.opacity} animationName=${r.animationName}`).join('\n      ')
+    );
+
+    await ctx.close();
+  }
 } finally {
   await browser.close();
   stop();
