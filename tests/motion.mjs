@@ -91,10 +91,19 @@ try {
       ok(above.length === 0, `.reveal elements in the first viewport are not stuck hidden — ${url}`, above.map((a) => `${a.sel} opacity=${a.opacity}`).join('\n      '));
     }
 
-    // A mid-page deep link: the services page has in-page anchors.
+    // A mid-page deep link: the services page has in-page anchors. Only
+    // elements the jump actually brought near the viewport are in scope —
+    // content further down the page is legitimately still below the fold
+    // and must not be flagged, same filter as the per-page loop above.
     await page.goto(`${base}/services.html#stormwater`, { waitUntil: 'load' });
     await page.waitForTimeout(400);
-    await assertRevealsVisible(page, '.reveal content visible after a mid-page deep link');
+    const nearAfterJump = await page.$$eval('.reveal', (els) =>
+      els
+        .filter((el) => el.getBoundingClientRect().top < window.innerHeight)
+        .map((el) => ({ sel: `${el.tagName.toLowerCase()}.${el.className}`, opacity: Number(getComputedStyle(el).opacity) }))
+        .filter((r) => r.opacity < 0.99)
+    );
+    ok(nearAfterJump.length === 0, '.reveal content visible after a mid-page deep link', nearAfterJump.map((a) => `${a.sel} opacity=${a.opacity}`).join('\n      '));
     await ctx.close();
   }
 } finally {
