@@ -43,16 +43,19 @@ try {
   section('motion — animation-timeline unsupported');
   {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-    await ctx.addInitScript(() => {
-      // Force the @supports guard to be irrelevant by disabling the feature's
-      // effect: any element that relies on it must already be visible.
-      const style = document.createElement('style');
-      style.textContent = '* { animation-timeline: none !important; animation-name: none !important; }';
-      document.documentElement.appendChild(style);
-    });
     const page = await ctx.newPage();
     for (const url of urls) {
       await page.goto(base + url, { waitUntil: 'load' });
+      // Force the @supports guard to be irrelevant by disabling the feature's
+      // effect: any element that relies on it must already be visible.
+      // Injected per-page via addStyleTag (not ctx.addInitScript) because
+      // document.documentElement is null at the point an addInitScript
+      // callback runs in this Playwright/Chromium combination — that
+      // injection silently threw and never applied. addStyleTag operates on
+      // the already-loaded page's document, so it's guaranteed to exist.
+      await page.addStyleTag({
+        content: '* { animation-timeline: none !important; animation-name: none !important; }',
+      });
       revealCount += await page.locator('.reveal').count();
       await assertRevealsVisible(page, `all .reveal content rendered without animation — ${url}`);
     }

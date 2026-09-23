@@ -577,7 +577,36 @@ a:hover {
       --reveal-timeline: view();
       animation: reveal-in linear both;
       animation-timeline: var(--reveal-timeline);
-      animation-range: entry 10% cover 30%;
+      /*
+       * `entry 0% entry 2%` is deliberately narrow and empirically tuned —
+       * not the original `entry 10% cover 30%`. That older range's "cover"
+       * endpoint scaled with the ELEMENT'S height (cover's total distance is
+       * element height + viewport height), so a tall block (e.g.
+       * ul.disciplines on /services.html, 2355px tall) that was already
+       * hundreds of pixels into the viewport at scroll 0 still landed
+       * mid-animation (measured opacity ~0.43) on first paint: real,
+       * partial-opacity content at load, which axe correctly flagged as a
+       * contrast failure (the blended ink color fails WCAG) and
+       * tests/motion.mjs correctly flagged as "stuck" content.
+       *
+       * `entry` alone is height-independent: entry 0%/100% map to a fixed
+       * viewport-height's worth of scroll distance (from "just touching the
+       * viewport's bottom edge" to "top edge reaches the viewport's top
+       * edge"), regardless of how tall the subject is. Narrowing the
+       * end to entry 2% (~18px of scroll, at a 900px viewport) means any
+       * element with even a sliver already showing at scroll 0 clears the
+       * range and renders fully opaque immediately, while an element still
+       * fully below the fold (hasn't started entering yet) is unaffected
+       * and still gets a real, visible fade-and-rise over the ~18px as it
+       * crosses into view — confirmed by scrolling to below-the-fold
+       * .reveal blocks on / and watching opacity go 0 → 1, and confirming
+       * blocks further down the same page stay at 0 throughout. Verified
+       * against the actual harness (tests/motion.mjs, tests/axe.mjs) across
+       * several candidate widths (2%, 4%, 15%) before settling here — 4%
+       * was already too wide to clear the tightest real case on
+       * /insights.html (a card grid poking only ~18px into the viewport).
+       */
+      animation-range: entry 0% entry 2%;
     }
   }
 }
