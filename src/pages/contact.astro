@@ -66,11 +66,7 @@ const bc = serviceAreas.filter((a) => a.region === 'BC');
 
           <div class="direct-item">
             <dt>Office</dt>
-            <dd class="direct-plain">
-              <Todo value={contact.address.street} />,
-              <Todo value={contact.address.city} />
-              <Todo value={contact.address.region} />
-            </dd>
+            <dd class="direct-plain">{contact.basedIn}</dd>
           </div>
         </dl>
 

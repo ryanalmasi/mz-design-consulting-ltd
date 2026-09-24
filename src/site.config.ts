@@ -39,11 +39,19 @@ export const site = {
  * to reach you that currently does not exist.
  */
 export const contact = {
-  phone: TODO('TODO: phone number'),
+  phone: '(780) 945-3620',
   /** E.164, used for the tel: link. e.g. '+17805551234' */
-  phoneHref: TODO('TODO: phone number'),
-  email: TODO('TODO: email address'),
+  phoneHref: '+17809453620',
+  email: 'contact@mzdesignconsulting.com',
 
+  /**
+   * No single street address exists yet — the firm works across two cities,
+   * not one office. Left as TODO deliberately: `address.city` gates whether
+   * Base.astro emits a `PostalAddress` structured-data block at all, and a
+   * real street/postal code should exist before that block does (search
+   * engines, not just visitors, read it). `basedIn` below is the honest
+   * substitute shown to visitors in the meantime.
+   */
   address: {
     street: TODO('TODO: street address'),
     city: TODO('TODO: city'),
@@ -51,6 +59,9 @@ export const contact = {
     postalCode: TODO('TODO: postal code'),
     country: 'CA',
   },
+
+  /** Plain-text location line shown in place of a structured address. */
+  basedIn: 'Based in Calgary, Alberta and Vancouver, British Columbia',
 
   hours: 'Monday to Friday, 8:00am – 5:00pm MST',
   responseTime: 'within one business day',
@@ -68,8 +79,24 @@ export const contact = {
 export const credentials = {
   apegaPermit: TODO('TODO: APEGA Permit to Practice number'),
   egbcPermit: TODO('TODO: EGBC Permit to Practice number'),
-  /** Engineers whose names appear on the About page. */
-  engineers: [] as Array<{
+  /**
+   * Engineers whose names appear on the About page.
+   *
+   * `registrations` deliberately has no membership number for Mohammad yet —
+   * only his registering body (APEGA) is confirmed. Add the real number
+   * (format: 'APEGA #12345') once it is in hand; a placeholder or invented
+   * number here is exactly the kind of unverified figure this file warns
+   * against elsewhere.
+   */
+  engineers: [
+    {
+      name: 'Mohammad Almasi',
+      designation: 'P.Eng., M.Eng.',
+      role: 'Founder & Principal Civil Engineer',
+      registrations: ['APEGA'],
+      bio: 'Mohammad founded M&Z Design Consulting after more than 20 years in civil engineering design and development, including work as a lead civil engineer within Stantec’s Oil and Gas Civil Engineering Group, supporting complex, large-scale projects. He holds a Master of Engineering from the University of Alberta and leads every project M&Z takes on, from the first terrain model through construction support, across Alberta and British Columbia.',
+    },
+  ] as Array<{
     name: string;
     designation: string; // e.g. 'P.Eng.'
     role: string;

@@ -28,13 +28,6 @@ const phoneReady = !isTodo(contact.phone);
     </nav>
 
     <div class="nav-actions">
-      {
-        phoneReady && (
-          <a href={`tel:${contact.phoneHref}`} class="nav-phone data">
-            {contact.phone}
-          </a>
-        )
-      }
       <a href="/contact" class="btn btn-primary nav-cta">Start a project</a>
     </div>
 
@@ -208,19 +201,6 @@ const phoneReady = !isTodo(contact.phone);
     align-items: center;
     gap: var(--s-4);
     flex-shrink: 0;
-  }
-
-  .nav-phone {
-    color: var(--text-invert);
-    font-size: var(--t-sm);
-    font-weight: 500;
-    text-decoration: none;
-    white-space: nowrap;
-    padding-block: var(--s-3);
-  }
-
-  .nav-phone:hover {
-    color: var(--cut-light);
   }
 
   .nav-cta {

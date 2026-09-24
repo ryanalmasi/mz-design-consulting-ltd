@@ -69,11 +69,7 @@ const bc = serviceAreas.filter((a) => a.region === 'BC');
 
       <div class="tb-cell">
         <h2 class="tb-label">Office</h2>
-        <p class="tb-value tb-address">
-          <Todo value={contact.address.street} />,
-          <Todo value={contact.address.city} />
-          <Todo value={contact.address.region} />
-        </p>
+        <p class="tb-value tb-address">{contact.basedIn}</p>
       </div>
     </div>
 

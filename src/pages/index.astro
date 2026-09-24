@@ -119,11 +119,21 @@ const services = [
       <dl class="proof-grid">
         <div class="proof-item">
           <dt>Years of experience</dt>
-          <dd class="data">{stats.yearsExperience}+</dd>
+          <dd class="data">
+            <span class="visually-hidden">{stats.yearsExperience}+</span>
+            <span class="stat-visual" aria-hidden="true">
+              <span class="stat-count" style={`--count-target:${stats.yearsExperience}`} />+
+            </span>
+          </dd>
         </div>
         <div class="proof-item">
           <dt>Projects delivered</dt>
-          <dd class="data">{stats.projectsDelivered}+</dd>
+          <dd class="data">
+            <span class="visually-hidden">{stats.projectsDelivered}+</span>
+            <span class="stat-visual" aria-hidden="true">
+              <span class="stat-count" style={`--count-target:${stats.projectsDelivered}`} />+
+            </span>
+          </dd>
         </div>
         <div class="proof-item">
           <dt>Provinces served</dt>
@@ -458,6 +468,65 @@ const services = [
     line-height: 1;
   }
 
+  /*
+   * Count-up. `--count` is a real, browser-animatable typed <integer>
+   * because `@property` registers it (same technique as .site-nav's
+   * --logo-scale/--nav-pad in Nav.astro); the `::before`'s
+   * `content: counter(stat)` renders whatever `counter-reset: stat
+   * var(--count)` currently holds, so the number genuinely ticks up rather
+   * than jumping straight to the target. The real, final value ("15+")
+   * lives in a `.visually-hidden` sibling for screen readers — a
+   * `content: counter()` value mid-animation isn't announced meaningfully,
+   * so the animated span is `aria-hidden`.
+   *
+   * Deliberately NOT `animation-timeline: view()` (unlike .reveal
+   * elsewhere in this codebase) — that ties progress directly to scroll
+   * offset, which is exactly the "follows the scroll wheel" behaviour this
+   * was asked not to have. A scroll-linked timeline also has no concept of
+   * "trigger once and finish on its own clock" — scrolling back up
+   * un-triggers it. Getting a one-shot, threshold-triggered, plays-to-
+   * completion-regardless-of-further-scrolling animation needs to know
+   * WHEN a threshold was crossed as a discrete event, which CSS has no
+   * primitive for; that part is the small script block below
+   * (IntersectionObserver, threshold 0.25, unobserve immediately after the
+   * first trigger). The default state here (unguarded) is still the FINAL
+   * value with no animation — same "default is correct, animation is a
+   * progressive enhancement" shape as everywhere else in this codebase — so
+   * the numbers are right immediately even with JS disabled or failed.
+   * `.is-counting` (added by the script) is the only thing that starts it.
+   */
+  @property --count {
+    syntax: '<integer>';
+    inherits: false;
+    initial-value: 0;
+  }
+
+  .stat-visual {
+    display: inline-flex;
+  }
+
+  .stat-count {
+    --count: var(--count-target);
+    counter-reset: stat var(--count);
+  }
+
+  .stat-count::before {
+    content: counter(stat);
+  }
+
+  .stat-count.is-counting {
+    animation: count-up 1.4s var(--ease) forwards;
+  }
+
+  @keyframes count-up {
+    from {
+      --count: 0;
+    }
+    to {
+      --count: var(--count-target);
+    }
+  }
+
   @media (max-width: 720px) {
     .proof-grid {
       grid-template-columns: 1fr 1fr;
@@ -570,3 +639,27 @@ const services = [
     margin-top: var(--s-6);
   }
 </style>
+
+<script>
+  // One-shot count-up trigger for the stat numbers in the proof strip.
+  // Deliberately not scroll-linked (see the CSS comment above .stat-count in
+  // this file's styles for why) — this fires once, at 25% visible,
+  // and the CSS animation it starts runs to completion on its own clock
+  // regardless of anything the user does with the scroll wheel afterward.
+  const counts = document.querySelectorAll<HTMLElement>('.stat-count');
+
+  if (counts.length && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          entry.target.classList.add('is-counting');
+          observer.unobserve(entry.target);
+        }
+      },
+      { threshold: 0.25 }
+    );
+
+    for (const el of counts) observer.observe(el);
+  }
+</script>
