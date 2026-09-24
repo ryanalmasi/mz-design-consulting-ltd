@@ -1,10 +1,12 @@
 ---
 import { getCollection } from 'astro:content';
+import { Image } from 'astro:assets';
 import Base from '@/layouts/Base.astro';
 import SectionDiagram from '@/components/SectionDiagram.astro';
 import ProjectCard from '@/components/ProjectCard.astro';
 import ArticleCard from '@/components/ArticleCard.astro';
 import CtaBand from '@/components/CtaBand.astro';
+import heroPoster from '@/assets/images/hero-earthworks-poster.jpg';
 import { site, stats, software } from '@/site.config';
 
 const projects = (await getCollection('projects'))
@@ -57,6 +59,28 @@ const services = [
 >
   <!-- ============ HERO ============ -->
   <section class="hero band-ink">
+    <!-- Decorative background; the hero's actual content (title, lead, CTAs,
+         diagram, caption) carries all of the meaning, so this is hidden from
+         assistive tech rather than described. Sourced from Pexels ("A Drone
+         Shot Over a Construction Site" by Jozef Papp, free commercial
+         license, no attribution required), trimmed and re-encoded locally —
+         see MEMORY.md for the licensing/attribution note and the reasoning
+         behind the scrim strength below. -->
+    <div class="hero-media" aria-hidden="true">
+      <video
+        class="hero-media-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        poster={heroPoster.src}
+      >
+        <source src="/video/hero-earthworks.webm" type="video/webm" />
+        <source src="/video/hero-earthworks.mp4" type="video/mp4" />
+      </video>
+      <Image class="hero-media-poster" src={heroPoster} alt="" width={1920} height={1080} />
+    </div>
+
     <div class="container hero-body">
       <h1 class="hero-title">
         Grading and drainage design<br />that balances on site
@@ -210,14 +234,116 @@ const services = [
 <style>
   /* ---- Hero ---- */
   .hero {
+    position: relative;
     padding-top: var(--s-9);
     overflow: hidden;
   }
 
+  /*
+   * The video sits absolutely positioned behind everything else in .hero.
+   * CSS paints positioned elements after non-positioned ones regardless of
+   * DOM order, so without this, .hero-media (positioned) would paint OVER
+   * .hero-body/.hero-diagram/the caption (non-positioned) and hide the
+   * text — hence every direct content child of .hero below also gets
+   * `position: relative` and a z-index above .hero-media's.
+   */
+  .hero-media {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .hero-media-video,
+  .hero-media-poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .hero-media-poster {
+    /* Only shown under reduced motion, below — never a loading placeholder;
+       the video's own `poster` attribute already covers that. */
+    display: none;
+  }
+
+  /*
+   * A flat 85%-opacity wash of --bg-invert, not a gradient — deliberately
+   * uniform so the worst-case contrast bound holds everywhere in the hero,
+   * not just wherever a gradient happens to be darkest. Verified by
+   * measuring this specific clip's actual luminance (ffmpeg signalstats:
+   * average frame luma never exceeds ~96/255 across the full loop) and
+   * computing the pathological case anyway — blending this scrim with a
+   * hypothetical PURE WHITE pixel (255,255,255), far brighter than
+   * anything in the real footage — still yields an effective background
+   * luminance that keeps --text-invert at ~10:1 contrast, comfortably
+   * clearing AA (4.5:1) with real margin. Real footage, which never
+   * sustains anywhere near pure white over a meaningful area, does
+   * better than this bound in practice.
+   */
+  .hero-media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--bg-invert) 85%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-media-video {
+      display: none;
+    }
+
+    .hero-media-poster {
+      display: block;
+    }
+  }
+
+  /*
+   * `.hero-diagram` is :global() deliberately — SectionDiagram is a child
+   * component, so its root <figure> only carries SectionDiagram.astro's own
+   * scoped data-astro-cid attribute, never index.astro's. A plain (scoped)
+   * `.hero-diagram { … }` rule here compiles to
+   * `.hero-diagram[data-astro-cid-<index's-hash>]`, which never matches that
+   * element — it silently does nothing, and the diagram keeps painting
+   * with z-index:auto, i.e. behind .hero-media. Caught by screenshotting
+   * the built page directly; computed styles showed position:static on the
+   * figure even with this rule present, before the :global() fix.
+   */
+  .hero > .container {
+    position: relative;
+    z-index: 1;
+  }
+
+  :global(.hero-diagram) {
+    position: relative;
+    z-index: 1;
+  }
+
+  /*
+   * Hero load-in: title, then lead, then buttons, then caption, each a
+   * beat behind the last — not scroll-driven like .reveal (global.css),
+   * because this content is the first thing on the page and is already in
+   * the viewport at load; there is no scroll position for a view-timeline
+   * to key off yet. This reuses .reveal's own keyframe (`reveal-in` —
+   * opacity + a 32px rise + a blur-to-sharp resolve) and its `var(--ease)`
+   * curve for the same visual language, just driven by wall-clock time
+   * (animation-delay) instead of scroll position. No animation-timeline
+   * property is set here, so this carries none of the shorthand-folding
+   * risk documented next to `--reveal-timeline` in global.css — that bug is
+   * specifically about `animation-timeline` being inlined into the
+   * shorthand, and there's no such property in this declaration to inline.
+   * Respects prefers-reduced-motion for free, via global.css's existing
+   * blanket `animation-duration: 0.01ms !important` override — no separate
+   * guard needed here, same as the hero diagram's own load-in animation.
+   */
   .hero-title {
     /* Wide enough that the explicit break controls the line turn rather than
        the measure fighting it. */
     max-width: 24ch;
+    animation: reveal-in var(--dur-slow) var(--ease) both;
   }
 
   .hero-lead {
@@ -226,6 +352,7 @@ const services = [
     font-size: var(--t-md);
     line-height: var(--lh-loose);
     color: var(--text-invert-muted);
+    animation: reveal-in var(--dur-slow) var(--ease) 120ms both;
   }
 
   .hero-actions {
@@ -233,6 +360,7 @@ const services = [
     gap: var(--s-3);
     margin-top: var(--s-6);
     flex-wrap: wrap;
+    animation: reveal-in var(--dur-slow) var(--ease) 240ms both;
   }
 
   .hero-body {
@@ -247,6 +375,7 @@ const services = [
     font-size: var(--t-sm);
     line-height: var(--lh-body);
     color: var(--text-invert-muted);
+    animation: reveal-in var(--dur-slow) var(--ease) 480ms both;
   }
 
   .hero-caption-mark {

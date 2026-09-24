@@ -522,50 +522,94 @@ a:hover {
        * reveal runs.
        */
       --reveal-timeline: view();
-      animation: reveal-in linear both;
+      /*
+       * `var(--ease)` (tokens.css: `cubic-bezier(0.2, 0, 0.1, 1)`), not
+       * `linear` — this is the site's one shared easing curve, used
+       * everywhere else motion happens, so the reveal decelerates into
+       * place the same way. Under a scroll-linked timeline this remaps
+       * scroll *progress* through the curve (not time), which is what
+       * turns a flat, mechanical opacity ramp into something that reads as
+       * settling in rather than just ticking up linearly with the scroll
+       * position.
+       */
+      animation: reveal-in var(--ease) both;
       animation-timeline: var(--reveal-timeline);
       /*
-       * `entry 0% entry 2%` is deliberately narrow and empirically tuned —
-       * not the original `entry 10% cover 30%`. That older range's "cover"
-       * endpoint scaled with the ELEMENT'S height (cover's total distance is
-       * element height + viewport height), so a tall block (e.g.
-       * ul.disciplines on /services.html, 2355px tall) that was already
-       * hundreds of pixels into the viewport at scroll 0 still landed
-       * mid-animation (measured opacity ~0.43) on first paint: real,
-       * partial-opacity content at load, which axe correctly flagged as a
-       * contrast failure (the blended ink color fails WCAG) and
-       * tests/motion.mjs correctly flagged as "stuck" content.
+       * `entry`'s 0%–100% distance is MIN(subject height, viewport height)
+       * — NOT a flat viewport-height figure. (An earlier version of this
+       * comment claimed height-independence; that was wrong, discovered by
+       * directly measuring the per-element transition window in a browser —
+       * a 60px element and a 634px element under the identical
+       * `entry 0% entry 15%` rule produced ~10px and ~94px windows
+       * respectively, scaling with each element's own height, not a shared
+       * constant.) This is actually the right behaviour for this design: a
+       * small element doesn't need a long scroll to fade in, and a large
+       * structural block gets a genuinely visible graduated fade instead of
+       * popping in over a handful of pixels.
        *
-       * `entry` alone is height-independent: entry 0%/100% map to a fixed
-       * viewport-height's worth of scroll distance (from "just touching the
-       * viewport's bottom edge" to "top edge reaches the viewport's top
-       * edge"), regardless of how tall the subject is. Narrowing the
-       * end to entry 2% (~18px of scroll, at a 900px viewport) means any
-       * element with even a sliver already showing at scroll 0 clears the
-       * range and renders fully opaque immediately, while an element still
-       * fully below the fold (hasn't started entering yet) is unaffected
-       * and still gets a real, visible fade-and-rise over the ~18px as it
-       * crosses into view — confirmed by scrolling to below-the-fold
-       * .reveal blocks on / and watching opacity go 0 → 1, and confirming
-       * blocks further down the same page stay at 0 throughout. Verified
-       * against the actual harness (tests/motion.mjs, tests/axe.mjs) across
-       * several candidate widths (2%, 4%, 15%) before settling here — 4%
-       * was already too wide to clear the tightest real case on
-       * /insights.html (a card grid poking only ~18px into the viewport).
+       * The one thing this range width must never do is leave an element
+       * mid-transition (partial opacity) at initial page load — that is
+       * both visually broken and a WCAG contrast failure axe will catch.
+       * That happens whenever `range% * MIN(elementHeight, viewportHeight)`
+       * exceeds how many pixels of an element were already inside the
+       * viewport at scroll 0 ("poke-in distance"). The original
+       * `entry 10% cover 30%` failed this on ul.disciplines (services.html,
+       * opacity ~0.43 on load) because `cover`'s endpoint scales with the
+       * element's own height in the *other* direction (widening, not
+       * capping, for tall subjects). The later `entry 0% entry 2%` was
+       * capped by /insights.html's article-card-grid, which sat only ~18px
+       * (later measured ~24px, as content shifted) into the viewport at
+       * load — the tightest case site-wide. That element has since been
+       * taken out of .reveal entirely (see insights.astro) since it was
+       * already ~97% on screen at load and had nothing worth animating,
+       * which removed it as the constraint. With it gone, the tightest
+       * remaining case site-wide requires range% ≤ ~31.5% (measured:
+       * /projects.html's card-grid at 390×844, poke ≈ 266px over an
+       * entry-distance of 844px, the viewport height, since that grid is
+       * far taller than the viewport). `entry 0% entry 15%` keeps roughly
+       * 2× margin under that floor while producing a real, visible
+       * fade-and-rise (tens to ~90+ px) for every structural block that
+       * actually needs one. Before widening further, or adding a new
+       * .reveal usage that might sit near the fold on load, re-measure: for
+       * every .reveal element on every page/viewport at scroll 0, compute
+       * (viewportHeight - element.getBoundingClientRect().top) as the
+       * poke-in distance where positive, divide by MIN(element height,
+       * viewport height), and take the minimum across the site — the range
+       * width must stay under that.
        */
-      animation-range: entry 0% entry 2%;
+      animation-range: entry 0% entry 15%;
     }
   }
 }
 
 @keyframes reveal-in {
   from {
+    /*
+     * translateY + blur, not opacity alone — plain opacity 0→1 (even at a
+     * wide range and with a 32-48px rise added) kept reading as too subtle,
+     * because an opacity ramp alone is a weak visual signal: it changes how
+     * much you can see through the element, not how sharply defined it is.
+     * Adding a blur-to-sharp transition alongside it makes the *fade*
+     * itself obvious — the content visibly resolves from soft to sharp — on
+     * top of the rise, which is the standard "materialize" pairing (soft
+     * focus + fade + settle) rather than a mechanical linear opacity climb
+     * or an artificial-feeling scale pop (tried and dropped — scaling text
+     * looks blurry from sub-pixel rendering for the wrong reason, an
+     * unintentional side effect rather than a deliberate soft-focus start).
+     * Combined with `var(--ease)` above, this reads as one continuous
+     * "resolve into place" motion. Text is only ever blurred mid-transition
+     * while the user is actively scrolling past it, never at rest (from
+     * blur(8px) to blur(0) exactly at the `to` keyframe), so nothing is
+     * left illegible.
+     */
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(32px);
+    filter: blur(8px);
   }
   to {
     opacity: 1;
     transform: none;
+    filter: blur(0);
   }
 }
 

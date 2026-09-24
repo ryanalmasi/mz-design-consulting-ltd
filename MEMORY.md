@@ -1131,3 +1131,597 @@ still unfixed (documentation-tooling only, zero effect on the shipped site).
   final-review-fixes-report.md`.
 - **Nothing is pushed.** Branch `revamp`, now 24 commits ahead of
   `origin/revamp`, still local only.
+
+---
+
+## Session 7 — 2026-09-23 — The `.reveal` "no animation at all" report: not a regression, a real design ceiling, fixed
+
+### Goal
+
+User (via a delegated task) reported that scrolling the site under `npm run
+dev` showed no visible scroll-reveal animation at all — nothing fades or
+rises into view. Asked to diagnose first rather than assume a fix was
+needed, per the background in Sessions 5/6 about the `.reveal` minifier-fold
+bug class and the already-known "near-instant flick" trade-off.
+
+### Diagnosis
+
+Ruled out, in order, with direct evidence:
+
+- **Not a browser/OS fallback.** The pinned Playwright Chromium (used to
+  reproduce) reports `CSS.supports('animation-timeline', 'view()') === true`,
+  and `matchMedia('(prefers-reduced-motion: reduce)').matches === false`
+  (confirmed both in Playwright's default context and via `defaults read
+  com.apple.universalaccess reduceMotion` on the host, which reads `0`).
+- **Not the Task 13/Session 5 minifier-shorthand-folding bug recurring.**
+  Computed style in both `npm run dev` and a clean `npm run build && npm run
+  preview` shows `animationTimeline: 'view()'` and `animationName:
+  'reveal-in'` — the `--reveal-timeline` indirection is intact and identical
+  in both paths. No dev-vs-build discrepancy exists.
+- **The animation genuinely runs, in both dev and preview.** Direct
+  measurement (scripted via `playwright-core` against the cached Chromium,
+  scrolling in small increments and reading `getComputedStyle(el).opacity`)
+  showed opacity transition cleanly from 0 to 1 as a below-the-fold element
+  crossed into view, in both `npm run dev` (unminified) and the built
+  preview (identical result).
+- **The real cause: the transition window Session 5 tuned
+  (`animation-range: entry 0% entry 2%`) was ~15-18px of scroll** — narrower
+  than a single mouse-wheel tick (~100px) or trackpad flick, so in ordinary
+  scrolling a user skips over every intermediate frame and the element
+  simply pops from invisible to fully visible. This exact concern was
+  already flagged in Session 5/6's "known issues" as "a near-instant flick…
+  worth revisiting… but do not loosen without re-running
+  `tests/motion.mjs`'s in-viewport-on-load scenario and `tests/axe.mjs`."
+  This session is that revisit, now that a real user actually hit it.
+
+**Conclusion put to the user directly (via AskUserQuestion, since this is a
+deliberate prior trade-off between visual polish and a real WCAG contrast
+bug, not a mechanical bug): not a regression.** Working exactly as tuned;
+the tuning itself is too conservative to be perceptible. User chose to widen
+the window and re-verify, matching Session 5's original empirical method.
+
+### What was actually constraining the width, and the fix
+
+Re-measured (script written this session, not committed — see Known issues)
+every `.reveal` element on every built page × both harness viewports
+(1440×900, 390×844) that is even partially visible at scroll 0 — the set
+that determines the safety ceiling, since only those can show partial
+opacity on first paint. Found **exactly one** genuinely tight case
+site-wide: `.card-grid.reveal` on `/insights.html` (the "more articles"
+grid below the lead `ArticleCard`), poking only ~23.6px into the viewport at
+1440×900 — the same element Session 5's comment already named at ~18px; the
+number drifted with ordinary content edits, not a new bug. Every other
+near-fold `.reveal` element site-wide had 260-456px of headroom, an order of
+magnitude looser.
+
+**Fix: took that one element out of `.reveal` entirely**
+(`src/pages/insights.astro`), rather than chase a global width capped by it.
+It is already ~97% on screen at load, so there was nothing worth animating
+for it in the first place. With it gone, the real site-wide floor rose to
+~31.5% (see below), and **`animation-range` widened from `entry 0% entry
+2%` to `entry 0% entry 15%`** (`src/styles/global.css`) — roughly 2× margin
+under that new floor.
+
+**A real correction made to the codebase's own understanding of `entry`,
+found while verifying the new width was actually safe.** Both the pre-existing
+comment (Session 5) and this session's first draft of the replacement
+comment asserted `entry`'s 0%–100% distance is a flat viewport-height figure,
+independent of the subject's own height. **That is wrong.** Directly
+measuring the actual per-element transition window (binary-searching the
+opacity 0→1 crossing in a live browser) showed the window scales with each
+element's own height: a 60px-tall `.reveal` element got an ~8-10px window
+under `entry 0% entry 15%`, while a 634px-tall one got ~94px — consistent
+with the real rule, `entry`'s distance = `MIN(subject height, viewport
+height)`, not a shared constant. This happens to be the *right* behaviour
+for the design (a small element doesn't need a long scroll to fade in; a
+large structural block gets a genuinely visible graduated fade), but the
+safety math has to use it: the correct ceiling per near-fold element is
+`poke-in-px / MIN(elementHeight, viewportHeight)`, not `poke-in-px /
+viewportHeight`. Recomputed with the corrected formula: the tightest
+remaining case site-wide is `/projects.html`'s card-grid at 390×844
+(poke ≈ 266px over an entry-distance of 844px, since that grid is far taller
+than the viewport) → **max safe width ≈ 31.5%**, comfortably clearing the
+chosen 15%. The corrected formula and the reasoning are now in
+`global.css`'s comment next to `animation-range`, replacing the incorrect
+one — a later session re-tuning this value should trust that comment over
+the retired Session 5 wording anywhere the two would have disagreed.
+
+### Changed
+
+- `src/pages/insights.astro` — removed `reveal` from the article `card-grid`
+  div, with a comment explaining why (poke-in distance, nothing to animate).
+- `src/styles/global.css` — `.reveal`'s `animation-range` widened from
+  `entry 0% entry 2%` to `entry 0% entry 15%`; the adjacent comment rewritten
+  to state the corrected `entry`-distance formula and the current measured
+  safety margin, replacing the incorrect height-independence claim.
+- `MEMORY.md` — this entry.
+
+### Verified
+
+From a clean state (`lsof -ti:4321,4322 | xargs kill -9`, `pkill -9 -f
+ms-playwright`, `rm -rf dist`), all under `nvm use` (Node 22.12.0):
+
+- `npm run check` — **0 errors, 0 warnings, 0 hints**, 23 files.
+- `npm run build` — 22 pages, clean.
+- `npm test` (`build && test:axe && test:layout && test:contrast &&
+  test:interaction && test:motion && test:visual`) — **all green, same
+  numbers as the last recorded Session 6 run**: axe 89/89 (1778
+  undetermined-contrast, unchanged), layout 177/177 (shipped JS 2087 bytes,
+  unchanged — still CSS-only), contrast 30/30, interaction 39/39, motion
+  69/69 (including the Session 6 "genuinely animating" regression guard;
+  reveal count correctly dropped from 17 to 16 site-wide after removing the
+  one element), visual 24/24. No baseline number needed re-measuring.
+- `npm run test:smoke` (not part of `npm test`) — 4/4.
+- Directly re-confirmed the accessibility invariant the whole change turns
+  on: `tests/motion.mjs`'s "in-viewport on load" section (opacity ≥ 0.99 for
+  every `.reveal` element visible at scroll 0, on every page × both harness
+  viewports, plus the `/services.html#stormwater` deep-link case) passed
+  with the widened range — this is the actual ground-truth check that the
+  new width doesn't reintroduce Session 5's original contrast bug, not just
+  the manual poke/height arithmetic above.
+- `git status` clean after verification; only the two source files listed
+  above are modified, nothing untracked.
+
+### Known issues / next steps
+
+- **Not committed.** `CLAUDE.md` says commit only when the user asks; they
+  had not at the time of writing.
+- **Diagnostic and measurement scripts used this session
+  (`diagnose-scratch.mjs`, `measure-poke.mjs`, `measure-poke2.mjs`) were
+  written at the repo root to get `node_modules` resolution, used, and then
+  deleted** — deliberately throwaway, same reasoning Sessions 5/6 gave for
+  not adding permanent scripts outside `tests/` unasked. If a future session
+  wants "re-measure the site-wide floor" to be a real command instead of
+  hand-written each time, that would be a reasonable, small addition to
+  `tests/` — not done here.
+- **The widened range was verified against exactly the harness's two
+  viewports (1440×900, 390×844), the same scope every prior session's
+  verification used.** A real device at some other viewport height could in
+  principle expose a different near-fold element as the tight case; this is
+  a pre-existing limitation of the testing scope, not new to this session's
+  change (the 2% value was only ever verified the same way).
+- **The visual *feel* of the widened reveal was not re-reviewed by a human.**
+  This session confirmed, by direct measurement, that the transition window
+  is now large enough on real structural blocks (58-94px, several times the
+  old 8-18px) to plausibly read as a real fade during normal scrolling, and
+  that no element shows partial opacity at load — but nobody watched it
+  scroll. This sits alongside the three human-review items already open
+  since Session 5 (duotone taste-call, hero draw-in feel, schedule-strip
+  look) — add "does the reveal actually look graduated now" to that list.
+  If a future session wants an even more graduated feel, re-measure the
+  site-wide floor first (see the comment in `global.css`) rather than
+  guessing — the constraint is real and page content shifts it over time.
+- Everything else carried forward from Session 6 is unchanged and not
+  re-verified here: 11 launch placeholders, Google Rich Results Test never
+  run, analytics beacon never executed in a browser, backlog items 2/4/9,
+  six articles needing P.Eng. review, unverified stats, `tests/` not wired
+  into CI, the `animation-timeline`-unsupported simulation still simulated
+  rather than native, the contact API still needing manual exercise under
+  `wrangler pages dev`, and the plan document's own fence-count bug.
+- **Still not pushed.** Branch `revamp`.
+
+---
+
+## Session 8 — 2026-09-23 — Reveal motion made obvious (taste iteration), and a hero background video
+
+### Goal
+
+Direct continuation of Session 7, same conversation. Two pieces of work: (1)
+the user watched the widened `.reveal` fade live and iterated on how it
+*feels* several rounds — this is the human-review item Session 7 flagged as
+still open, now actually resolved by a human looking at it; (2) a new
+request to add a full-bleed background video to the homepage hero, keeping
+the existing SVG cut/fill diagram.
+
+### Part A — `.reveal`'s motion, iterated live
+
+Session 7 left the mechanism *correct* (proven with a live opacity trace —
+see that entry) but the feel unreviewed. This session's rounds, each shipped
+and verified before moving to the next:
+
+1. **14px → 28px `translateY`.** Still reported "way too subtle."
+2. **28px → 48px `translateY` + `scale(0.96)`.** Fixed the "too subtle"
+   complaint, but the user's *next* request ("more of a natural fade in")
+   was implicitly a complaint about this round: scaling text in and out
+   looks artificial — sub-pixel rendering makes it look soft/blurry for the
+   wrong reason (an unintentional side effect, not a deliberate soft-focus
+   choice).
+3. **48px+scale → 32px `translateY`, `linear` → `var(--ease)`.** Dropped the
+   scale, moderated the rise, switched to the site's one shared easing token
+   (`tokens.css`: `cubic-bezier(0.2, 0, 0.1, 1)`, used everywhere else
+   motion happens) so a scroll-linked timeline remaps *progress* through
+   that curve instead of climbing linearly. The user's follow-up ("no i
+   meant transition as in a fade in... make it more obvious") clarified
+   they'd read the previous ask as being about position/easing, but meant
+   the opacity fade itself needed to be more obvious.
+4. **Added `filter: blur(8px) → blur(0)` alongside the existing translateY +
+   opacity.** Final state. Plain opacity is a weak signal on its own (it
+   only changes how much you can see through something); pairing a
+   blur-to-sharp resolve with the fade and rise is the standard
+   "materialize" combination and is what actually reads as an obvious yet
+   natural fade, per direct visual confirmation against the live dev
+   server. Text is only ever blurred mid-scroll, never at rest.
+
+**Every round was verified with the full suite before moving to the next**
+(`npm run check` 0/0/0, `npm test` all green, same numbers each time:
+axe 89/89, layout 177/177, contrast 30/30, interaction 39/39, motion 69/69,
+visual 24/24) and the built CSS was re-checked each time for the
+minifier-shorthand-fold regression (`grep animation-timeline:var(--reveal-timeline) dist/_astro/*.css`)
+since the `animation` shorthand declaration was touched (linear → var(--ease)).
+It never folded — the `--reveal-timeline` indirection from Sessions 5/6
+covers the easing-function change fine, since the risk is specifically
+`animation-timeline` being inlined into the shorthand, not the timing
+function.
+
+**Current state, for a future session:** `.reveal`'s keyframes are
+`translateY(32px) + blur(8px) + opacity: 0` → resting, over `entry 0% entry
+15%` (Session 7) with `var(--ease)` timing (this session). If asked to tune
+this further, read Session 7's `global.css` comment for the *scroll-distance*
+constraint (the WCAG-driven ~31.5% ceiling) before touching
+`animation-range`, and know that `translateY`/`blur` amplitude has no such
+ceiling — those are the tuned-by-eye levers, not the accessibility-limited
+one.
+
+### Part B — Hero background video
+
+**Classified architectural** (per `superpowers:brainstorming`): no video
+pipeline existed anywhere in this repo, so per that skill's own bounded/
+architectural test ("if there is no existing flow to change, the task is
+not bounded"), this wasn't bounded regardless of how contained the final
+diff turned out to be. Given the actual footprint stayed to one page's hero
+with no new interfaces or restructuring, ceremony was scaled down —
+clarifying questions and a short in-chat design, approved by the user,
+rather than a written spec doc + `writing-plans`. Flagged directly before
+building: Session 3 deliberately avoided a photo/footage-led hero because no
+real project footage existed, choosing the abstract drawing-sheet language
+instead partly for that reason — this is a real departure from that call.
+The user was told this plainly and chose to proceed anyway; not re-litigated
+here, just recorded so a later reader knows it was a conscious trade, not an
+oversight.
+
+**No video-generation tool was available this session** (no Sora/Veo/Runway
+integration). Told the user this directly rather than pretending otherwise.
+User chose stock footage.
+
+**Asset: Pexels "A Drone Shot Over a Construction Site" by Jozef Papp**
+(`https://www.pexels.com/video/a-drone-shot-over-a-construction-site-4205680/`),
+Pexels License — free for commercial use, no attribution required (credited
+here anyway, for the record). An aerial drone shot of an excavator working
+an earthworks site; thematically near-identical to the existing
+`mass-earthworks-overhead.jpg`/`earthworks-cut-fill.jpg` stock photos
+already on the site, so it extends an existing pattern rather than
+introducing a new visual register. Source is genuinely 4K (3840×2160,
+29.12s, 88.6 MB) — confirmed by downloading and probing with `ffprobe`.
+
+**Not served at 4K.** Serving the raw 88.6 MB source would have badly
+regressed the site's core performance principle (Session 1: near-zero
+weight, built for contractors on mid-range Android over spotty LTE). Instead:
+downloaded the 1080p rendition (20.1 MB) as an encoding source, trimmed to a
+10s loop (`ffmpeg -ss 2 -t 10`), scaled to 1280×720, stripped audio, and
+re-encoded to both formats (`ffmpeg` installed via `brew install ffmpeg` —
+not previously on this machine; a reversible, standard dev-tool install,
+done and reported rather than asked about first since it's low-risk and
+directly served the explicit request):
+
+- `public/video/hero-earthworks.mp4` — H.264, `-crf 28 -preset slow`, 1.02 MB
+- `public/video/hero-earthworks.webm` — VP9, `-crf 34 -b:v 0`, 0.79 MB
+- `src/assets/images/hero-earthworks-poster.jpg` — poster/fallback frame,
+  routed through Astro's normal `astro:assets` `<Image>` pipeline (unlike
+  the video files, which can't go through that pipeline and live in
+  `public/` as static files) — built output generates responsive WebP
+  variants at 52–153 KB depending on breakpoint, versus the 211 KB source
+  JPEG.
+
+Total hero media payload: ~0.8–1 MB (video) + tens of KB (poster), against
+an 88.6 MB raw 4K source — roughly a 90x reduction, and still comparable to
+a single unoptimized large photo.
+
+**Contrast, verified two ways, not just asserted:**
+
+1. **Analytically, in advance.** Measured the actual clip's luminance with
+   `ffmpeg`'s `signalstats` filter across every frame of the final loop:
+   average frame luma never exceeds ~96/255 (~38%) — a dark, earth-toned
+   scene, small isolated highlights aside (`YMAX` does hit 255 in a few
+   pixels — stray reflective debris, not a sustained region). Computed the
+   pathological case anyway: blending the chosen scrim
+   (`color-mix(in srgb, var(--bg-invert) 85%, transparent)`, flat — not a
+   gradient, deliberately, so the same bound holds everywhere in the hero,
+   not just wherever a gradient happens to be darkest) against a
+   *hypothetical pure-white pixel* (255,255,255), far brighter than
+   anything the real footage ever sustains, and computing WCAG relative
+   luminance/contrast by hand: `--text-invert` (#f2f1ec) against that
+   worst-case blended background still lands at ~10:1 — comfortably past
+   AA (4.5:1) and past AAA (7:1), with real margin, before the actual
+   (never-that-bright) footage is even considered.
+2. **Empirically, after.** `npm run test:axe` reported the expected
+   `colorContrastIncomplete` increase (1778 → 1792, +14 — all four homepage
+   renderings, ~3–4 nodes each) because axe cannot analyze contrast over a
+   video/image background, the exact same bookkeeping category already
+   established in Sessions 4/5/6 for `background-image` elements. **Zero
+   real violations** — all four `axe — {light,dark} @ {1440x900,390x844}`
+   sub-checks (which assert `violations.length === 0`) passed clean; only
+   the baseline-increase tripwire fired, as designed. Re-measured
+   `tests/baseline.json` in the same commit per the established protocol
+   (Session 4's rule: never silently, always with the reason — recorded
+   here).
+
+**A real bug found and fixed before any of this could be verified: `.hero-diagram`
+was silently unstyled.** `SectionDiagram` is a child component; its root
+`<figure>` only carries *its own* component's scoped `data-astro-cid`
+attribute, never `index.astro`'s. A plain (Astro-scoped) `.hero-diagram { … }`
+rule written in `index.astro`'s `<style>` block compiles to
+`.hero-diagram[data-astro-cid-<index's-hash>]`, which never matches that
+element — the browser silently accepts the rule and applies nothing.
+Concretely: `position: relative; z-index: 1` never took effect, so the
+diagram (default `position: static`, `z-index: auto`) painted *behind*
+`.hero-media` (which is `position: absolute`) per ordinary CSS stacking
+rules (positioned elements paint after non-positioned ones regardless of
+DOM order) — the entire cut/fill diagram was invisible, fully hidden by the
+video, on the first build. Caught by actually screenshotting the built page
+rather than trusting `astro check` (which had nothing to say about this —
+it's a scoping/specificity issue, not a type error) — the diagram's
+`getBoundingClientRect()` reported a real, correctly-laid-out box, which is
+what made it non-obvious from computed layout alone; only a real screenshot
+or `getComputedStyle().position` showed the rule wasn't applying. Fixed
+with Astro's `:global()` escape hatch: `:global(.hero-diagram) { position:
+relative; z-index: 1; }`. **This is a real, previously-undocumented Astro
+gotcha for this codebase** — any future page-level style meant to affect a
+child component's root element by class needs `:global()`, or it silently
+no-ops. Worth adding to `CLAUDE.md`'s gotcha list if this pattern comes up
+again.
+
+**A second, minor bug**: the initial markup included `fetchpriority="low"`
+on the `<video>` (to deprioritize it behind critical text/CSS during load).
+Astro's built-in JSX-style types don't include `fetchpriority` on
+`VideoHTMLAttributes` in this Astro version, so `astro check` correctly
+failed at 1 error. Dropped the attribute rather than fighting the type
+system for a nice-to-have hint with no functional loss.
+
+**Accessibility mechanism, CSS-only, matching the site's established
+pattern** (no JS added — `layout.mjs`'s shipped-JS baseline stayed at 2087
+bytes, unchanged): the hero carries both a `<video autoplay muted loop
+playsinline poster={...}>` and a plain `<Image>` poster, absolutely
+positioned on top of each other; `.hero-media-poster { display: none; }` by
+default, flipped under `@media (prefers-reduced-motion: reduce)` (video
+hidden, poster shown) — the same show/hide-under-reduced-motion shape
+`.reveal` already uses, just without a `@supports` half since there's no
+feature-detection question here (video support itself degrades natively via
+the `poster` attribute and the nested `<source>` fallback chain, not via a
+CSS guard).
+
+### Changed
+
+- `src/styles/global.css` — `.reveal`'s `animation` timing (`linear` →
+  `var(--ease)`) and keyframes (`translateY(14px)` → `translateY(32px) +
+  filter: blur(8px)`, through the two intermediate rounds recorded above).
+- `src/pages/index.astro` — hero restructured: new `.hero-media` video/poster
+  layer (video + `<Image>` fallback + scrim), `position`/`z-index` stacking
+  fixes for `.hero-media` and its siblings (including the `:global()` fix
+  for `.hero-diagram`), new imports (`astro:assets` `Image`, the poster
+  asset).
+- `public/video/hero-earthworks.mp4`, `public/video/hero-earthworks.webm` —
+  new, static (not Astro-optimized) video assets.
+- `src/assets/images/hero-earthworks-poster.jpg` — new, Astro-optimized
+  poster/fallback image.
+- `tests/baseline.json` — `colorContrastIncomplete` `1778` → `1792`.
+- ffmpeg installed via Homebrew on this machine (not a repo change, noted
+  for whoever next runs the video-encoding steps above on a fresh machine).
+- `MEMORY.md` — this entry.
+
+### Verified
+
+From a clean state (`lsof -ti:4321,4322 | xargs kill -9`, `pkill -9 -f
+ms-playwright`, `rm -rf dist`), all under `nvm use` (Node 22.12.0), **after**
+the `.hero-diagram` `:global()` fix and the baseline re-measure:
+
+- `npm run check` — **0 errors, 0 warnings, 0 hints**, 23 files.
+- `npm run build` — 22 pages, clean; Astro generated 5 responsive WebP
+  variants of the poster automatically.
+- `npm test` — **all green**: axe 89/89 (1792 undetermined-contrast,
+  re-measured and justified above), layout 177/177 (shipped JS 2087 bytes,
+  unchanged), contrast 30/30, interaction 39/39, motion 69/69, visual 24/24.
+- `npm run test:smoke` — 4/4.
+- **Visual confirmation via Playwright screenshots** (not just automated
+  assertions) at 1440×900 and 390×844, light and dark, and under
+  `reducedMotion: 'reduce'`: hero text legible over the video in every case;
+  cut/fill diagram fully visible and correctly layered on top after the
+  `:global()` fix; reduced-motion context confirmed via
+  `getComputedStyle` — video `display: none`, poster `display: block`.
+- `git status` clean of stray files; only the intended paths are
+  modified/new (`public/video/`, the new poster, `index.astro`,
+  `global.css`, `tests/baseline.json`, `MEMORY.md`).
+
+### Known issues / next steps
+
+- **Not committed.** `CLAUDE.md`: commit only when asked; not asked yet.
+- **The `:global()` scoping gotcha found in Part B is new and not yet added
+  to `CLAUDE.md`'s numbered gotcha list** — recorded here in full instead.
+  A future session touching cross-component styling from a page's own
+  `<style>` block should add it there if it comes up again.
+- **The video's loop point is a hard cut, not a crossfade** (10s trimmed
+  from a continuous 29s shot, no blending at the seam). Standard practice
+  for a background element that is never the focal point, and not treated
+  as a defect, but worth knowing if a future session wants to polish it
+  further — would need either a longer loop or an actual crossfade encode.
+- **Autoplay-with-audio browser policies weren't a concern here** (video has
+  no audio track — stripped during encoding), but if a future session
+  swaps in footage that does have audio, muted autoplay must be preserved
+  or some browsers will simply refuse to autoplay at all.
+- **Real-device battery/data-usage impact of an autoplaying hero video was
+  not measured** — only byte size and axe/contrast were verified. The
+  target audience (Session 1: contractors on mid-range Android, spotty LTE)
+  is exactly the group most sensitive to this; worth a real-device check
+  before launch, not just a desktop-browser one.
+- Everything carried forward from Session 7 is unchanged and not
+  re-verified here: 11 launch placeholders, Google Rich Results Test never
+  run, analytics beacon never executed in a browser, backlog items 2/4/9,
+  six articles needing P.Eng. review, unverified stats, `tests/` not wired
+  into CI, the contact API still needing manual exercise under `wrangler
+  pages dev`.
+- **Still not pushed.** Branch `revamp`.
+
+---
+
+## Session 9 — 2026-09-23 — Higher-quality hero video, and a staggered hero load-in
+
+### Goal
+
+Direct continuation of Session 8, same conversation, two follow-up requests
+against the just-shipped hero: (1) "make the title card text also animate in
+... lag in time ... title first, then description, then buttons"; (2) "make
+the video higher quality."
+
+### Part A — Video quality
+
+Session 8's shipped encode was deliberately conservative: 1280×720, H.264
+CRF 28 / VP9 CRF 34, chosen for weight (≈1–0.8 MB) over fidelity, from a
+1080p source that was itself downscaled from the true 4K original. Re-encoded
+from the still-available 1080p source (no need to re-fetch the 4K original)
+at three candidate quality tiers before picking one, each from the *same* 10s
+trim so only resolution/CRF varied:
+
+| Tier | Resolution | H.264 CRF | MP4 size | VP9 CRF | WebM size |
+|---|---|---|---|---|---|
+| Shipped (Session 8) | 1280×720 | 28 | 1.02 MB | 34 | 0.79 MB |
+| "hq" (rejected) | 1920×1080 | 20 | 7.32 MB | 28 | 3.86 MB |
+| **"mid" (shipped)** | **1920×1080** | **24** | **4.44 MB** | **32** | **2.41 MB** |
+
+Picked the middle tier deliberately, not the highest-quality one: a real,
+visible resolution doubling (720p → 1080p) is the change that actually
+reads as "higher quality" on a background element partly obscured by the
+85% scrim and hero text — the extra fidelity CRF 20 buys over CRF 24 is much
+harder to perceive under that scrim, for roughly 65% more bytes. `<source>`
+order in the markup still lists WebM first, so any browser that supports it
+(most current ones) loads the 2.41 MB file; the 4.44 MB MP4 is the
+Safari-without-VP9-support fallback path, not the common case. Still a real
+weight increase over Session 8 (roughly 2.4–4.3×, depending on which
+`<source>` a given browser picks) against the site's stated
+mid-range-Android/spotty-LTE performance principle — recorded plainly here
+rather than glossed over, not re-litigated since the user asked for this
+specific trade-off directly.
+
+Poster image regenerated to match at 1920×1080 (`ffmpeg -q:v 2`, 500 KB
+source JPEG; Astro's `astro:assets` pipeline generates its own responsive
+WebP variants from it at build time, same as Session 8). The `<Image>`
+component's explicit `width`/`height` props were updated from `1280×720` to
+`1920×1080` to match the new source file's real dimensions — Astro doesn't
+error on a mismatch here (both are 16:9, so no distortion either way), but
+leaving the old, now-wrong values in would have been a latent inconsistency
+for no reason.
+
+### Part B — Staggered hero load-in
+
+**New, separate mechanism from `.reveal` — deliberately.** `.reveal`
+(global.css) is scroll-position-driven (`animation-timeline: view()`),
+which only makes sense for content that starts below the fold; the hero's
+title/lead/actions/caption are the first thing on the page and are already
+in the viewport at scroll 0, so there is no scroll position for a
+view-timeline to key off. Built as a plain wall-clock `animation-delay`
+cascade instead, reusing `.reveal`'s own `reveal-in` keyframe (opacity +
+32px rise + blur(8px)→blur(0)) and `var(--ease)` timing for the same visual
+language:
+
+```
+.hero-title    animation: reveal-in var(--dur-slow) var(--ease) both;              /* delay 0 */
+.hero-lead     animation: reveal-in var(--dur-slow) var(--ease) 120ms both;
+.hero-actions  animation: reveal-in var(--dur-slow) var(--ease) 240ms both;
+.hero-caption  animation: reveal-in var(--dur-slow) var(--ease) 480ms both;
+```
+
+`--dur-slow` is 420ms, so the full cascade settles by ~900ms (caption starts
+at 480ms, finishes at 900ms). No `animation-timeline` property appears
+anywhere in this declaration, so none of it carries the shorthand-folding
+risk documented next to `--reveal-timeline` — that bug is specifically about
+`animation-timeline` being inlined into the `animation` shorthand by the
+production minifier, and there is no such property here to inline.
+`prefers-reduced-motion: reduce` is respected for free via global.css's
+existing blanket `animation-duration: 0.01ms !important` override — the
+same mechanism the hero diagram's own load-in animation already relies on;
+no new guard was needed.
+
+**Verified the cascade is a real, ordered sequence, not just four
+simultaneous fades** — sampled `getComputedStyle(el).opacity` for all four
+elements every ~40ms across the first 1.2s of a fresh page load. Confirmed:
+title reaches full opacity by ~490ms while lead is still at ~0.15–0.9,
+actions doesn't start moving until ~360ms, caption doesn't start until
+~610ms — a genuine staggered cascade, each element's fade-in window
+overlapping the next's start rather than four things happening at once.
+
+**A real risk investigated before trusting this, not assumed away**: this is
+the *first* non-scroll-driven, wall-clock CSS animation on visible-at-load
+content in this codebase. `tests/axe.mjs` calls `page.goto(url, {waitUntil:
+'load'})` then runs axe with **no explicit extra wait** — if axe happened to
+sample the page mid-cascade, it would see genuinely lower-contrast
+blended/blurred text (not merely "indeterminate," the same bucket a
+background-image causes, but a real, computable, potentially-failing
+contrast ratio), which is exactly the shape of bug this codebase has hit
+before via `.reveal`. Checked empirically rather than reasoning about it in
+the abstract: ran `test:axe` five times in a row (once initially, four more
+back-to-back afterward) against the shipped state — **89/89 every time, 0
+violations every time**. The reason it's reliably safe in practice: `page
+.addScriptTag` (injecting the axe-core bundle) plus `axe.run()`'s own DOM
+traversal reliably take longer in wall-clock time than the ~900ms cascade,
+so by the time axe actually samples computed styles, the animation has
+already settled. This is a real timing dependency, not a structural
+guarantee — flagged here explicitly (rather than left implicit) so a future
+session that shortens `--dur-slow`, or upgrades to a faster axe-core that
+completes its setup quicker, knows to re-verify this specific assumption
+rather than assume it still holds silently. Also ran `tests/layout.mjs` and
+`tests/interaction.mjs` (neither adds extra waits before checking the
+homepage either) as part of two full-suite runs — no failures in either.
+
+### Changed
+
+- `public/video/hero-earthworks.mp4`, `public/video/hero-earthworks.webm` —
+  replaced with the 1920×1080 "mid" encode (4.44 MB / 2.41 MB).
+- `src/assets/images/hero-earthworks-poster.jpg` — replaced with a matching
+  1920×1080 source.
+- `src/pages/index.astro` — `<Image>` `width`/`height` updated to
+  1920×1080; `.hero-title`/`.hero-lead`/`.hero-actions`/`.hero-caption` each
+  gained a staggered `animation` declaration (new comment block explains
+  why this is a separate mechanism from `.reveal`).
+- `MEMORY.md` — this entry.
+- `tests/baseline.json` — **not changed this session**; the measured
+  `colorContrastIncomplete` count after these changes (1781, confirmed
+  stable across multiple runs) sits comfortably under the existing
+  committed ceiling of 1792 from Session 8, so no re-measure was needed.
+
+### Verified
+
+From a clean state (`lsof -ti:4321,4322 | xargs kill -9`, `pkill -9 -f
+ms-playwright`, `rm -rf dist`), under `nvm use` (Node 22.12.0):
+
+- `npm run check` — **0 errors, 0 warnings, 0 hints**.
+- `npm run verify` (`check && build`) — clean, 22 pages.
+- `npm test`, run twice in full from clean state: **all green both times**,
+  identical numbers each run — axe 89/89, layout 177/177, contrast 30/30,
+  interaction 39/39, motion 69/69, visual 24/24.
+- `npm run test:axe` specifically, run 5 times total across the session
+  (see Part B) — 89/89 and 0 violations every time, to build real confidence
+  against the timing dependency identified above, not just a single pass.
+- **Visual confirmation via Playwright screenshots**, not just automated
+  assertions: captured the hero ~200ms after load (title sharp, lead
+  mid-fade, actions barely started, diagram mid-draw — a genuine cascade,
+  visually) and again after settling (everything sharp, full opacity). The
+  1080p quality bump is visibly sharper in the captured frames versus
+  Session 8's 720p screenshots — finer texture detail in the dirt/material
+  piles.
+- `git status` clean of stray files — only the intended paths touched.
+
+### Known issues / next steps
+
+- **Not committed.** Still waiting on the user to ask, per `CLAUDE.md`.
+- **The axe-timing safety margin documented in Part B is real but implicit**
+  — nothing in the test harness *enforces* that axe's setup overhead exceeds
+  the hero cascade's ~900ms; it currently just reliably does. If a future
+  session tightens the animation timing, speeds up the test harness, or
+  upgrades axe-core, this specific check should be re-run, not assumed.
+- **The video's overall weight increased materially this session** (roughly
+  2.4–4.3× depending on which `<source>` a browser picks) in direct trade
+  for visible quality, at the user's explicit request — flagged in Part A,
+  not silently absorbed. Worth a real-device check on the target audience's
+  actual hardware/connections before launch, same open item Session 8 already
+  flagged and still unresolved.
+- Everything else carried forward from Sessions 7/8 is unchanged and not
+  re-verified here.
+- **Still not pushed.** Branch `revamp`.

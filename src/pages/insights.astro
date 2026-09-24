@@ -79,8 +79,17 @@ const faqSchema = {
       {lead && <ArticleCard article={lead} feature priority headingLevel={2} />}
 
       {
+        /*
+         * No .reveal here, deliberately: with the lead ArticleCard above it,
+         * this grid's top sits only ~24px below the fold at 1440x900 — the
+         * single tightest case on the whole site (see global.css's
+         * animation-range comment). It's already ~97% on screen at load, so
+         * there is nothing worth animating, and keeping it out of .reveal is
+         * what lets the site-wide range be wide enough elsewhere to actually
+         * be visible.
+         */
         rest.length > 0 && (
-          <div class="card-grid reveal">
+          <div class="card-grid">
             {rest.map((a) => (
               <ArticleCard article={a} headingLevel={2} />
             ))}
