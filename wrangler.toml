@@ -8,8 +8,8 @@ name = "mz-design-consulting"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-09-20"
 
-# Optional. Bind a KV namespace named RATE_LIMIT to enable per-IP rate limiting
-# on the contact endpoint. The function works without it.
-# [[kv_namespaces]]
-# binding = "RATE_LIMIT"
-# id = "<your-kv-namespace-id>"
+# Bind a KV namespace named RATE_LIMIT to enable per-IP rate limiting on the
+# contact endpoint. The function works without it.
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "fec5417f15474d3ba856bc38e24d7561"
