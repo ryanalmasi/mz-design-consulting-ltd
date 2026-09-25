@@ -164,9 +164,60 @@ const stations = [
   }
 
   .diagram svg {
-    width: max(100%, 860px);
+    width: 100%;
     height: 100%;
     flex-shrink: 0;
+  }
+
+  /*
+   * Mobile: pin the SVG at its natural 1200×400 size (1:1 with the
+   * viewBox — the actual pixel numbers used everywhere else in this file,
+   * like the CUT callout at x=470 and the FILL callout at x=920) and use a
+   * CSS transform to zoom/pan to a deliberately chosen window, instead of
+   * fighting `width` + `preserveAspectRatio="slice"` to do it.
+   *
+   * That earlier approach (forcing `width: max(100%, 860px)`, later tried
+   * at several smaller values) never worked as intended, and not for the
+   * `max-width: 100%` reset reason fixed above — this is a second,
+   * separate bug found after that fix: `width`'s interaction with `slice`
+   * and the container's fixed clamp()'d height turned out not to move the
+   * visible crop window the way the numbers suggested it should (confirmed
+   * empirically — 450px, 620px and 860px all produced the *same* crop,
+   * always showing CUT but cropping straight through FILL). `slice`'s
+   * scale is `max(box-width/viewBox-width, box-height/viewBox-height)`,
+   * and with this container's height fixed, several different `width`
+   * values above the height-driven scale's own break-even point behaved
+   * identically. Rather than keep fighting that interaction, a transform
+   * decouples "how zoomed in" (scale) from "which point stays fixed"
+   * (transform-origin) from "how far to shift to center it"
+   * (translateX) — three independent, individually-checkable numbers.
+   *
+   * scale(0.6) with transform-origin at (695px, 200px) — the midpoint
+   * between CUT (x=470) and FILL (x=920), vertically centered — keeps
+   * that point fixed on screen while zooming; translateX(-95px) then
+   * shifts the whole thing left so that point lands at the container's
+   * own horizontal center rather than wherever it happened to fall
+   * naturally. Verified directly: at this container's width (up to
+   * ~640px, where this query stops applying), both callouts' full text
+   * now render with positive margin on every side — confirmed via
+   * getBoundingClientRect() against the container's edges, not just by
+   * eye. Tick annotations (EXISTING GROUND / PROPOSED GRADE / chainage)
+   * still crop at the far edges on the narrowest phones; that trade-off
+   * is deliberate — CUT and FILL are the labels the page's own message is
+   * actually about.
+   */
+  @media (max-width: 640px) {
+    .diagram svg {
+      width: 1200px;
+      /* Same global.css `svg { max-width: 100% }` reset that bit the
+         previous approach — without this, width above is silently capped
+         back down to the container's width before the transform below
+         even runs, and every number in that transform is wrong. */
+      max-width: none;
+      height: 400px;
+      transform-origin: 695px 225px;
+      transform: translate(-95px, -110px) scale(0.6);
+    }
   }
 
   .tick {

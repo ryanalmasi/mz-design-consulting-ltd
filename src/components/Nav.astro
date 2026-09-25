@@ -44,26 +44,29 @@ const phoneReady = !isTodo(contact.phone);
   </div>
 
   <div class="nav-drawer" id="nav-drawer" hidden>
-    <ul>
-      {
-        nav.map((item) => (
-          <li>
-            <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>
-              {item.label}
+    <div class="nav-drawer-inner">
+      <div class="nav-drawer-eyebrow data-sm" aria-hidden="true">Menu</div>
+      <ul>
+        {
+          nav.map((item, i) => (
+            <li style={`--drawer-i:${i}`}>
+              <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+      <div class="nav-drawer-actions" style={`--drawer-i:${nav.length}`}>
+        {
+          phoneReady && (
+            <a href={`tel:${contact.phoneHref}`} class="btn btn-secondary">
+              Call {contact.phone}
             </a>
-          </li>
-        ))
-      }
-    </ul>
-    <div class="nav-drawer-actions">
-      {
-        phoneReady && (
-          <a href={`tel:${contact.phoneHref}`} class="btn btn-secondary">
-            Call {contact.phone}
-          </a>
-        )
-      }
-      <a href="/contact" class="btn btn-primary">Start a project</a>
+          )
+        }
+        <a href="/contact" class="btn btn-primary">Start a project</a>
+      </div>
     </div>
   </div>
 </header>
@@ -243,14 +246,69 @@ const phoneReady = !isTodo(contact.phone);
     transform: translateY(-4px) rotate(-45deg);
   }
 
+  /*
+   * Drop-down animation: a CSS grid-rows collapse (0fr → 1fr), not
+   * height:auto — grid-template-rows is transitionable and doesn't need
+   * JS to measure a pixel height first, and it degrades safely: if a
+   * browser doesn't support animating grid-template-rows, it just snaps
+   * between the two states instantly, same visible open/closed result,
+   * no broken layout. `overflow: hidden` + `min-height: 0` on the inner
+   * wrapper is what lets the row genuinely collapse to zero rather than
+   * being held open by its own content's intrinsic height (grid items
+   * default to min-height: auto, which fights a 0fr row otherwise).
+   * Padding lives on the inner wrapper rather than `.nav-drawer` itself
+   * for the same reason — padding on the grid container doesn't shrink
+   * with the row, so it would visibly float above/below zero-height
+   * content while "closed".
+   *
+   * The opacity/translateY fade on the inner wrapper is the actual
+   * "drop down" motion — content eases in from slightly above rather than
+   * just growing, which reads as more deliberate than a plain height
+   * reveal. Both transitions share `var(--dur-slow)`/`var(--ease)`, the
+   * same tokens used for motion everywhere else in this codebase, and
+   * both are plain CSS transitions (not animation-timeline or anything
+   * scroll-driven), so global.css's blanket
+   * `transition-duration: 0.01ms !important` under
+   * prefers-reduced-motion neutralises this automatically — no separate
+   * guard needed, same as the hero's own load-in.
+   */
   .nav-drawer {
+    display: grid;
+    grid-template-rows: 0fr;
     border-top: 1px solid var(--line-invert);
     background: var(--bg-invert);
-    padding: var(--s-4) var(--gutter) var(--s-6);
+    transition: grid-template-rows var(--dur-slow) var(--ease);
+  }
+
+  .nav-drawer.is-open {
+    grid-template-rows: 1fr;
   }
 
   .nav-drawer[hidden] {
     display: none;
+  }
+
+  .nav-drawer-inner {
+    overflow: hidden;
+    min-height: 0;
+    padding: var(--s-4) var(--gutter) var(--s-6);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition:
+      opacity var(--dur-slow) var(--ease),
+      transform var(--dur-slow) var(--ease);
+  }
+
+  .nav-drawer.is-open .nav-drawer-inner {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .nav-drawer-eyebrow {
+    margin: 0 0 var(--s-2);
+    color: var(--muted-ink, var(--text-invert-muted));
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
   }
 
   .nav-drawer ul {
@@ -258,18 +316,73 @@ const phoneReady = !isTodo(contact.phone);
     padding: 0;
   }
 
+  /*
+   * Each link fades/rises in a beat behind the last, echoing the hero's
+   * own staggered load-in (index.astro) at a much quicker, menu-scale
+   * pace. `--drawer-i` (set inline per <li>/.nav-drawer-actions) is the
+   * only thing that differs per item, so one rule covers all of them.
+   * Delayed until `.is-open` is applied — outside that state the items
+   * sit at rest (opacity 1, no offset), so a browser that can't run the
+   * transition, or a screen reader, never encounters a permanently
+   * invisible link.
+   */
+  .nav-drawer li,
+  .nav-drawer-actions {
+    opacity: 1;
+  }
+
+  .nav-drawer.is-open li,
+  .nav-drawer.is-open .nav-drawer-actions {
+    animation: drawer-item-in var(--dur) var(--ease) backwards;
+    animation-delay: calc(var(--drawer-i, 0) * 35ms);
+  }
+
+  @keyframes drawer-item-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   .nav-drawer a {
+    position: relative;
     display: block;
-    padding: var(--s-4) 0;
+    padding: var(--s-4) 0 var(--s-4) var(--s-4);
     color: var(--text-invert-muted);
     font-size: var(--t-md);
     font-weight: 500;
     text-decoration: none;
     border-bottom: 1px solid var(--line-invert);
+    transition: color var(--dur) var(--ease);
   }
 
-  .nav-drawer a[aria-current='page'] {
-    color: var(--cut-light);
+  /* A drawing-tick mark, same device as .hero-caption-mark — appears on
+     the active page and on hover/focus, rather than colour alone. */
+  .nav-drawer a::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 0;
+    height: 2px;
+    background: var(--cut-light);
+    transition: width var(--dur) var(--ease);
+  }
+
+  .nav-drawer a[aria-current='page'],
+  .nav-drawer a:hover,
+  .nav-drawer a:focus-visible {
+    color: var(--text-invert);
+  }
+
+  .nav-drawer a[aria-current='page']::before,
+  .nav-drawer a:hover::before,
+  .nav-drawer a:focus-visible::before {
+    width: var(--s-3);
   }
 
   .nav-drawer-actions {
@@ -302,10 +415,43 @@ const phoneReady = !isTodo(contact.phone);
   const drawer = document.getElementById('nav-drawer');
 
   if (toggle && drawer) {
+    let closeTimer: ReturnType<typeof setTimeout> | undefined;
+
+    // Opening and closing are asymmetric on purpose: the drawer must be
+    // un-hidden (real display, not display:none) BEFORE the open transition
+    // starts, so the browser has a real 0fr/closed state to animate FROM —
+    // but on close, `hidden` can't be set until the closing transition has
+    // actually finished, or the content (and its focusable links) vanish
+    // instantly while still visually "in flight". `transitionend` is the
+    // primary signal; the timeout is a fallback in case some other change
+    // interrupts the transition before it fires (e.g. a rapid re-toggle),
+    // so the drawer never gets stuck un-hidden with zero visible height.
     const setOpen = (open: boolean) => {
       toggle.setAttribute('aria-expanded', String(open));
-      drawer.hidden = !open;
+      clearTimeout(closeTimer);
+
+      if (open) {
+        drawer.hidden = false;
+        // Force a style/layout flush between un-hiding and adding the
+        // open class, so the browser registers the closed (0fr) state as
+        // a real starting point rather than coalescing both changes into
+        // one paint and skipping the transition entirely.
+        drawer.getBoundingClientRect();
+        drawer.classList.add('is-open');
+      } else {
+        drawer.classList.remove('is-open');
+        closeTimer = setTimeout(() => {
+          drawer.hidden = true;
+        }, 500);
+      }
     };
+
+    drawer.addEventListener('transitionend', (e) => {
+      if (e.target === drawer && e.propertyName === 'grid-template-rows' && !drawer.classList.contains('is-open')) {
+        clearTimeout(closeTimer);
+        drawer.hidden = true;
+      }
+    });
 
     toggle.addEventListener('click', () => {
       setOpen(toggle.getAttribute('aria-expanded') !== 'true');

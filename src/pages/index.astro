@@ -348,12 +348,22 @@ const services = [
    * Respects prefers-reduced-motion for free, via global.css's existing
    * blanket `animation-duration: 0.01ms !important` override — no separate
    * guard needed here, same as the hero diagram's own load-in animation.
+   *
+   * 900ms per element with 280ms staggered delays, not `var(--dur-slow)`
+   * (420ms) — deliberately NOT reusing that shared token, since it drives
+   * unrelated UI transitions elsewhere and slowing it globally would be a
+   * much bigger change than asked for. At the original 420ms/120ms-stagger
+   * pace the whole four-step sequence was done in ~900ms total, too quick
+   * to actually read as four distinct beats. This is roughly 2x both the
+   * per-element duration and the gap between them (full sequence now
+   * finishes around 1.8s), so each step has room to be seen before the
+   * next starts.
    */
   .hero-title {
     /* Wide enough that the explicit break controls the line turn rather than
        the measure fighting it. */
     max-width: 24ch;
-    animation: reveal-in var(--dur-slow) var(--ease) both;
+    animation: reveal-in 900ms var(--ease) both;
   }
 
   .hero-lead {
@@ -362,7 +372,7 @@ const services = [
     font-size: var(--t-md);
     line-height: var(--lh-loose);
     color: var(--text-invert-muted);
-    animation: reveal-in var(--dur-slow) var(--ease) 120ms both;
+    animation: reveal-in 900ms var(--ease) 280ms both;
   }
 
   .hero-actions {
@@ -370,7 +380,7 @@ const services = [
     gap: var(--s-3);
     margin-top: var(--s-6);
     flex-wrap: wrap;
-    animation: reveal-in var(--dur-slow) var(--ease) 240ms both;
+    animation: reveal-in 900ms var(--ease) 560ms both;
   }
 
   .hero-body {
@@ -385,7 +395,7 @@ const services = [
     font-size: var(--t-sm);
     line-height: var(--lh-body);
     color: var(--text-invert-muted);
-    animation: reveal-in var(--dur-slow) var(--ease) 480ms both;
+    animation: reveal-in 900ms var(--ease) 900ms both;
   }
 
   .hero-caption-mark {

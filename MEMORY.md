@@ -1725,3 +1725,237 @@ ms-playwright`, `rm -rf dist`), under `nvm use` (Node 22.12.0):
 - Everything else carried forward from Sessions 7/8 is unchanged and not
   re-verified here.
 - **Still not pushed.** Branch `revamp`.
+
+---
+
+## Session 10 — 2026-09-24 — Real Safari testing, the mobile diagram fix (twice), and a mobile nav rebuild
+
+### Goal
+
+Continuation of the same conversation. Three requests in one turn: (1) the
+mobile hero-diagram sizing fix from the previous turn was reported as still
+wrong; (2) make the mobile nav drawer more polished and add a drop-down
+animation; (3) verify all animations are cross-browser compatible,
+"especially Safari."
+
+### Part A — Got real Safari testing for the first time
+
+Every prior session's "cross-browser" claims rested on the pinned Chromium
+build alone — there was no WebKit in this environment. Installed one:
+`npx playwright install webkit` → downloaded WebKit 26.6, which happens to
+exactly match this machine's installed Safari version (confirmed via
+`sw_vers`/`CSS.supports` — this WebKit build supports
+`animation-timeline: view()`, `@property`, `color-mix()`, `grid-template-rows`
+transitions, and `IntersectionObserver` natively). This is a genuinely new
+capability for this repo's verification process, not previously available —
+worth keeping in mind for future sessions rather than re-installing each time
+(`~/Library/Caches/ms-playwright/webkit-*`).
+
+**Audit result: nothing needed fixing for animation compatibility.**
+Every scroll-timeline-gated feature (`.reveal`, the nav condense) was
+re-verified two ways in real WebKit, not just reasoned about: (1) running
+natively (WebKit 26.6 supports the features, so they just work — confirmed
+directly), and (2) under this codebase's existing
+`animation-timeline: none !important` unsupported-simulation technique
+(from `tests/motion.mjs`), confirming the `@supports`/`@media` fallback
+chain correctly leaves content visible with zero console errors, in WebKit,
+not just Chromium. The count-up (JS/`IntersectionObserver`-driven, no
+`animation-timeline` dependency by Session 9's design) worked identically.
+Swept all 22 built pages in WebKit for console/page errors: found exactly
+one, and it's a **local-preview-only artifact** — Turnstile's iframe is
+always `https://challenges.cloudflare.com`, and WebKit correctly refuses to
+let it embed in an `http://localhost` parent (a stricter cross-origin check
+than Chromium applies locally). This will not occur on the real deployed
+site, which is `https` end to end. No code change; recorded here so a
+future session doesn't rediscover and "fix" a non-bug.
+
+### Part B — The mobile diagram fix, actually fixed this time (and a real
+lesson in not trusting `preserveAspectRatio="slice"` math from memory)
+
+**Session 9's fix (`max-width: none` overriding the global `svg { max-width:
+100% }` reset) was correct but incomplete.** It genuinely stopped text from
+being sliced mid-word, but the crop window it produced only ever showed
+"CUT" — "FILL" (the other half of the page's own core cut/fill message) was
+never in frame at any width tried, including values from 420px up to
+2000px. Spent real effort chasing this with the wrong mental model before
+finding the actual cause:
+
+- Tried increasing/decreasing the forced `width` on `.diagram svg`,
+  reasoning from the standard `slice` formula
+  (`scale = max(box/vb-width, box/vb-height)`). Numbers derived this way
+  contradicted direct measurement repeatedly (a `getScreenCTM()`-based
+  probe showed one relationship across 860–2000px, `getBoundingClientRect()`
+  on the callout text showed a completely different, *width-independent*
+  result across 420–860px) — the math was being derived from memory of the
+  spec rather than verified, and didn't match what the browser actually
+  did.
+- Root cause, found by reverting to first principles and reasoning from
+  `slice`'s actual clamping behavior against a *fixed* container height
+  (`clamp(230px, 27vw, 350px)`, effectively pinned at 230px on any phone):
+  below a real but easy-to-miscalculate `width` threshold, the container's
+  height — not width — drives the scale, and past that point, changes to
+  `width` alone don't move the visible crop window the way the naive
+  formula suggests once the SVG's own internal viewport clips the
+  oversized "slice" render before the outer `.diagram`'s `overflow: hidden`
+  ever gets a say.
+- **Replaced the whole `width` + `slice` approach with a plain CSS
+  `transform`.** Pin the SVG at its literal, unscaled 1200×400 size (1:1
+  with the viewBox, so every number elsewhere in the file — the CUT callout
+  at x=470, FILL at x=920 — is directly usable), then
+  `transform-origin: 695px 225px; transform: translate(-95px, -110px)
+  scale(0.6);`. `transform-origin` is the midpoint between the two callouts
+  (both axes — the first attempt at this only solved the X axis and
+  produced a *second*, different bug: FILL cropped *vertically*, off the
+  bottom of the short container, since CUT and FILL sit at different
+  heights in the source drawing by design). `scale`/`translate` are three
+  independent, individually-verifiable numbers instead of one CSS property
+  whose effect depends on a poorly-remembered interaction with an SVG
+  attribute and a sibling CSS property — this is the actual reason it's
+  more reliable, not just that the specific numbers happen to work.
+- **Hit the exact same `max-width: 100%` reset bug a second time** when
+  first writing the transform version, because the `max-width: none`
+  override didn't get carried over into the new rule. Caught it the same
+  way as Session 9: measuring the actual rendered box
+  (`getBoundingClientRect()`) against what the CSS claimed, not trusting
+  the stylesheet text.
+- **Verified with real margins, not eyeballing screenshots**: for both
+  callouts, `getBoundingClientRect()` against the container's four edges,
+  confirmed positive margin on every side. Swept 320px, 375px, 390px,
+  428px, 639px, and 641px (the last two straddling the 640px breakpoint) —
+  both labels fully visible with no page-level horizontal overflow at every
+  width, and the 641px case correctly falls through to the unmodified
+  desktop rendering with zero visible seam. Confirmed in both Chromium and
+  real WebKit.
+- **Known, deliberate trade-off, unchanged from Session 9's framing**:
+  "EXISTING GROUND" and "PROPOSED GRADE" (the secondary axis labels) still
+  crop at the edges on the narrowest phones. CUT and FILL — the labels the
+  page's own headline message is actually about — do not.
+
+### Part C — Mobile nav: drop-down animation + polish
+
+**The animation.** The drawer previously toggled the `hidden` attribute
+instantly with zero transition. Replaced with a CSS grid-rows collapse
+(`grid-template-rows: 0fr → 1fr`) on `.nav-drawer` plus an opacity/translateY
+fade on a new `.nav-drawer-inner` wrapper — chosen over animating
+`height: auto` directly because grid-rows is natively transitionable without
+JS ever measuring a pixel height, and degrades safely (a browser that can't
+transition it just snaps between states, same open/closed end-result, no
+broken layout).
+
+**This requires being careful with `hidden`, per `CLAUDE.md` gotcha #3.**
+Opening: `hidden` is removed *before* the `is-open` class is added, with a
+forced synchronous layout read (`drawer.getBoundingClientRect()`) in between
+— without that, the browser can coalesce "un-hide" and "apply open state"
+into one paint and skip the transition entirely, since it never sees the
+closed (0fr) state as a real starting point. Closing is the asymmetric
+half: `is-open` is removed immediately (so `aria-expanded` and the visual
+close both start right away), but `hidden` is deliberately **not** set
+until the closing transition actually finishes — via a `transitionend`
+listener (checking `propertyName === 'grid-template-rows'`) with a 500ms
+`setTimeout` fallback in case some interruption (e.g. a rapid re-toggle)
+stops `transitionend` from firing. Setting `hidden` immediately on close
+would have yanked the drawer's links out of the accessibility tree and tab
+order while they were still visually animating shut.
+
+**Verified the real animation timing directly, not just that it "looks
+right"** (same standard as every other motion feature this project ships):
+traced `grid-template-rows` and the inner wrapper's `opacity` frame-by-frame
+across an open (both climb smoothly from 0/48px to 1/full, settling
+~420–440ms, matching `--dur-slow`) and confirmed the close sequence keeps
+`hidden: false` for the full ~420–500ms transition before flipping to
+`true`. Reduced-motion re-verified separately: opens/closes in well under
+150ms (the existing global blanket `transition-duration: 0.01ms` override
+covers this automatically, since — unlike `.reveal`'s scroll-timeline case
+in Session 7 — this is a plain time-based CSS transition, exactly the
+mechanism that override was built for). All of the above re-confirmed in
+real WebKit, not just Chromium.
+
+**The polish**, scoped deliberately modest (an animation add-on, not a
+redesign): a small mono-uppercase "Menu" eyebrow label at the top of the
+drawer, matching the drawing-sheet label convention used elsewhere
+(`.tb-label` in the footer, etc.); a per-link staggered fade/rise on open
+(`--drawer-i`, set inline per item, drives a 35ms-per-item
+`animation-delay` — same staggering *idea* as the hero's load-in from
+Session 9, much quicker pace, appropriate for a small interactive menu
+rather than a hero); and a small orange tick mark (`::before`, reusing the
+same visual device as `.hero-caption-mark`) that grows in on the active
+page and on hover/focus, rather than relying on colour change alone.
+
+**A real regression found and fixed by the test suite, not by eye:** the
+new "Menu" label was first written as a `<p>` tag. `tests/visual.mjs`'s
+"body type floor" check reads the page's *first* `<p>` element and asserts
+it's ≥16px — it had been silently relying on that always being
+`.hero-lead`. The new label (a small `.data-sm` element) is earlier in the
+DOM on every page now, so the check started reading it instead and failed
+correctly. Fixed by making the label a `<div>` instead of a `<p>` —
+semantically more correct anyway (it's a short label, not body prose), and
+sidesteps the test's implicit assumption entirely rather than special-casing
+the test to exclude it.
+
+**Extended `tests/interaction.mjs`'s existing "mobile drawer" section**
+rather than leaving the new behavior unverified in the permanent suite:
+added a check that the drawer's opacity is measurably below its rest value
+immediately after the open click (proving it's a real transition, not an
+instant snap — same "prove it, don't assume it" standard `tests/motion.mjs`
+already applies to `.reveal`), and updated the Escape-close assertion to
+account for the now-intentionally-asynchronous close (checks
+`aria-expanded` flips immediately, then waits 600ms before asserting the
+drawer is actually hidden, instead of checking instantly and getting a false
+failure mid-animation).
+
+### Changed
+
+- `src/components/SectionDiagram.astro` — `.diagram svg`'s mobile sizing
+  rewritten from `width: max(100%, Npx)` + `preserveAspectRatio="slice"`
+  fighting to a `transform: translate() scale()` approach, scoped to
+  `@media (max-width: 640px)`; desktop rendering untouched.
+- `src/components/Nav.astro` — `.nav-drawer` restructured with a
+  `.nav-drawer-inner` wrapper, a `Menu` eyebrow label, per-item stagger
+  animation, and a tick-mark active/hover state; the open/close script
+  rewritten to properly sequence `hidden` against the new CSS transitions.
+- `tests/interaction.mjs` — "mobile drawer" section extended with a
+  genuine-transition check and updated for the new asynchronous close
+  timing.
+- `MEMORY.md` — this entry.
+
+### Verified
+
+From a clean state (`lsof -ti:4321,4322 | xargs kill -9`, `pkill -9 -f
+ms-playwright`, `rm -rf dist`), under `nvm use` (Node 22.12.0):
+
+- `npm run verify` (`check && build`) — **0 errors, 0 warnings, 0 hints**,
+  22 pages.
+- `npm test` — **all green**: axe 89/89, layout 177/177, contrast 30/30,
+  interaction 41/41 (up from 39 — the two new drawer checks), motion 69/69,
+  visual 24/24 (including the "body type floor" check the `<p>`→`<div>`
+  fix restored).
+- **Real WebKit 26.6** (newly installed this session), separately, for
+  everything in Parts A–C above: animation-timeline support confirmed
+  native; the unsupported-simulation fallback confirmed correct for
+  `.reveal` and nav condense; count-up confirmed correct; all 22 pages
+  swept for console errors (one found, explained above as a local-only
+  artifact); the diagram fix's margins confirmed positive on both axes;
+  the nav drawer's open/close timing traced frame-by-frame exactly as in
+  Chromium.
+- Diagram fix additionally swept across six viewport widths (320–641px)
+  in Chromium, confirming both CUT and FILL labels fully visible with
+  positive margin at every one, and zero page-level horizontal overflow.
+
+### Known issues / next steps
+
+- **Not committed.** Still waiting on the user to ask, per `CLAUDE.md`.
+- **WebKit is now cached on this machine** (`~/Library/Caches/ms-playwright/webkit-2359`)
+  but `tests/lib/browser.mjs` still only knows how to find the Chromium
+  cache — the committed test harness itself does not run against WebKit.
+  Extending it to run the full suite against both engines (not just this
+  session's ad hoc checks) would be a real, valuable addition, not done
+  here since it wasn't asked for.
+- **"EXISTING GROUND" and "PROPOSED GRADE" still crop on the narrowest
+  phones**, by design (see Part B) — CUT and FILL do not. If a future
+  session wants all four labels visible simultaneously on mobile, that's a
+  larger change (e.g. a genuinely different mobile layout for the diagram,
+  not just a tighter crop) rather than a tuning pass on the current
+  transform.
+- Everything else carried forward from Sessions 7/8/9 is unchanged and not
+  re-verified here.
+- **Still not pushed.** Branch `revamp`.

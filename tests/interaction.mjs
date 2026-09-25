@@ -79,8 +79,25 @@ try {
     await page.click('#nav-toggle');
     ok(await page.isVisible('#nav-drawer'), 'drawer opens on click');
     ok((await page.getAttribute('#nav-toggle', 'aria-expanded')) === 'true', 'toggle reports expanded');
+    // Genuinely animating, not just toggling a class with no visible effect —
+    // same "prove it, don't assume it" check this suite already applies to
+    // .reveal (tests/motion.mjs). Sampled early in the open transition,
+    // opacity must be measurably below its rest value of 1.
+    const midOpenOpacity = await page.evaluate(
+      () => Number(getComputedStyle(document.querySelector('#nav-drawer .nav-drawer-inner')).opacity)
+    );
+    ok(midOpenOpacity < 0.95, 'drawer open is a real transition, not an instant snap', `opacity=${midOpenOpacity}`);
 
     await page.keyboard.press('Escape');
+    // Closing is intentionally asynchronous now: aria-expanded flips
+    // immediately, but `hidden` isn't set until the CSS transition
+    // actually finishes (see the comment in Nav.astro's script) — an
+    // immediate isVisible() check would just catch it mid-animation.
+    ok(
+      (await page.getAttribute('#nav-toggle', 'aria-expanded')) === 'false',
+      'Escape reports collapsed immediately'
+    );
+    await page.waitForTimeout(600);
     ok(!(await page.isVisible('#nav-drawer')), 'Escape closes the drawer');
     const focused = await page.evaluate(() => document.activeElement?.id);
     ok(focused === 'nav-toggle', 'focus returns to the toggle', `activeElement is #${focused}`);
